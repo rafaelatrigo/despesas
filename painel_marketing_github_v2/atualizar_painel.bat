@@ -3,8 +3,8 @@ chcp 65001 >nul
 cd /d "%~dp0"
 echo ==== Painel Marketing e Stand ====
 echo.
-echo 1/3 Gerando dados a partir do fluxo de caixa...
-python scripts\gerar_dados.py %1
+echo 1/3 Gerando dados (fluxo de caixa + BASE TEMPLATE mais recentes)...
+python scripts\gerar_dados.py
 if errorlevel 1 (echo. & echo ERRO ao gerar os dados. Nada foi publicado. & pause & exit /b 1)
 echo.
 echo 2/3 Registrando no Git...

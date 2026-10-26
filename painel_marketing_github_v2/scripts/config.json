@@ -1,0 +1,35 @@
+{
+  "pasta_fluxo": "C:\\Users\\Carozzo\\OneDrive - Carozzo\\Financeiro e Contábil Carozo - General\\CONTROLADORIA\\FLUXO DE CAIXA CONSOLIDADO",
+  "padrao_fluxo": "*fluxo*caixa*.xlsx",
+  "aba_fluxo": "Base",
+  "pasta_budget": "C:\\Users\\Carozzo\\OneDrive - Carozzo\\Financeiro e Contábil Carozo - General\\CONTROLADORIA\\DESPESAS",
+  "padrao_budget": "BASE TEMPLATE BUDGET*.xlsx",
+  "aba_budget": "Realizado",
+  "grupos": [
+    {
+      "grupo_fechamento": "8. MARKETING (PRODUTO)",
+      "nome": "Marketing"
+    },
+    {
+      "grupo_fechamento": "8.1. STAND DE VENDAS",
+      "nome": "Stand de vendas"
+    }
+  ],
+  "empreendimentos": [
+    {
+      "nome": "Carozzo Wellness",
+      "empresa_fluxo": "CAROZZO WELLNESS",
+      "empresa_sienge": "CAROZZO WELLNESS JARDIM ARMAÇÃO LTDA"
+    },
+    {
+      "nome": "Terrazza Balena",
+      "empresa_fluxo": "TERRAZZA BALENA SPE LTDA",
+      "empresa_sienge": "TERRAZZA BALENA SPE LTDA"
+    },
+    {
+      "nome": "Ícone Connected (Feira)",
+      "empresa_fluxo": "TERRAZZA FEIRA SPE LTDA",
+      "empresa_sienge": "TERRAZZA FEIRA SPE LTDA"
+    }
+  ]
+}

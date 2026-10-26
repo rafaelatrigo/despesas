@@ -129,7 +129,7 @@ tr.tot td{font-weight:650;border-top:2px solid var(--line)}
     <div class="scroll"><table id="lanc"></table></div>
     <p class="foot" id="lancFoot"></p>
   </section>
-  <p class="foot">Fonte: Fluxo de Caixa Grupo Carozzo (aba Base) e BASE TEMPLATE BUDGETv5 (aba Realizado). Dados criptografados; gerado automaticamente.</p>
+  <p class="foot" id="fontes">Dados criptografados; gerado automaticamente.</p>
 </main>
 <script>
 const MESES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
@@ -172,6 +172,7 @@ function init(){
   if(!["Todos",...D.empreendimentos].includes(st.emp)) st.emp="Todos";
   if(!["Ambos",...D.grupos].includes(st.grp)) st.grp="Ambos";
   document.getElementById("stamp").innerHTML=`Atualizado em ${fmtD(D.data_atualizacao)}<br>Realizado até ${fmtD(D.corte)}`;
+  if(D.fontes) document.getElementById("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base). Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S e N, por data caixa). Dados criptografados; gerados em ${D.gerado_em.replace("T"," ")}.`;
   seg("fEmp",["Todos",...D.empreendimentos],"emp");
   seg("fGrp",["Ambos",...D.grupos],"grp");
   document.getElementById("q").addEventListener("input",renderLanc);
