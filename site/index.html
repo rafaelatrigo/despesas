@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Marketing e Stand · Grupo Carozzo</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f4f5f2; --surface:#fcfcfb; --surface-2:#eef0ec; --line:#dcdfd8;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#7a7975;
+  --brand:#2f5a34; --brand-ink:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834;
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#232321; --line:#33332f;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#97968e;
+    --brand:#2f5a34; --s1:#3987e5; --s2:#d95926;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#232321; --line:#33332f;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#97968e;
+  --brand:#2f5a34; --s1:#3987e5; --s2:#d95926;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--brand);color:var(--brand-ink);padding:18px 16px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+header .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:flex-end;justify-content:space-between;padding:0}
+h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.01em}
+header p{margin:2px 0 0;opacity:.85;font-size:13px}
+.stamp{font-size:13px;opacity:.9;text-align:right}
+main.wrap{padding-top:22px;padding-bottom:40px}
+.filters{display:flex;flex-wrap:wrap;gap:12px 24px;margin-bottom:18px}
+.fgroup{display:flex;flex-direction:column;gap:6px}
+.flabel{font-size:12px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:6px 12px;font:inherit;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--text);color:var(--surface);border-color:var(--text)}
+.seg button:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.tile .k{font-size:12px;color:var(--text-2)}
+.tile .v{font-size:26px;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12px;color:var(--muted);margin-top:2px}
+.meter{height:6px;background:var(--surface-2);border-radius:3px;margin-top:10px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--text-2);border-radius:3px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:16px}
+.card .sub{margin:0 0 12px;color:var(--text-2);font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--text-2);margin-bottom:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw.out{background:transparent!important;border:2px dashed var(--text-2)}
+#chart{width:100%;position:relative}
+#chart svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:170px;display:none;z-index:2}
+.tip b{display:block;margin-bottom:4px}
+.tip .r{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:12px;color:var(--text-2);font-weight:600;background:var(--surface-2);position:sticky;top:0}
+th:first-child,td:first-child,th.l,td.l{text-align:left}
+tr.tot td{font-weight:650;border-top:2px solid var(--line)}
+.scroll{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:8px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--text)}
+.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.badge.c::before{background:var(--good)} .badge.n::before{background:var(--warn)} .badge.p::before{background:var(--s1)}
+.over{color:var(--crit);font-weight:600}
+.over::before{content:"▲ "}
+.search{width:100%;max-width:320px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;margin-bottom:10px}
+.foot{color:var(--muted);font-size:12px;margin-top:8px}
+.err{background:var(--surface);border:1px solid var(--crit);border-radius:var(--radius);padding:16px}
+.lock{max-width:380px;margin:48px auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.lock h2{margin:0 0 6px;font-size:18px}.lock p{margin:0 0 16px;color:var(--text-2);font-size:13px}
+.lock label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px}
+.lock input[type=password]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+.lock .chk{display:flex;gap:8px;align-items:center;margin:12px 0 16px;font-size:13px;color:var(--text-2)}
+.lock button{width:100%;padding:10px;border:0;border-radius:8px;background:var(--brand);color:var(--brand-ink);font:inherit;font-weight:600;cursor:pointer}
+.lock button:disabled{opacity:.6;cursor:wait}
+.lock .msg{min-height:18px;margin-top:10px;font-size:13px;color:var(--crit)}
+.hidden{display:none!important}
+.sair{background:transparent;border:1px solid rgba(255,255,255,.5);color:var(--brand-ink);border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer;margin-top:6px}
+@media (max-width:640px){.tile .v{font-size:22px} h1{font-size:19px}.stamp{text-align:left}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div><h1>Marketing e Stand de Vendas</h1><p>Grupo Carozzo · previsto x realizado por empreendimento · uso interno</p></div>
+  <div class="stamp"><div id="stamp"></div><button class="sair hidden" id="sair" type="button">Sair</button></div>
+</div></header>
+<form class="lock" id="lock" autocomplete="off">
+  <h2>Acesso restrito</h2>
+  <p>Painel interno do Grupo Carozzo. Digite a senha para abrir os dados.</p>
+  <label for="senha">Senha</label>
+  <input type="password" id="senha" required autofocus>
+  <div class="chk"><input type="checkbox" id="lembrar"><label for="lembrar" style="margin:0;font-weight:400">Lembrar nesta aba até fechar o navegador</label></div>
+  <button type="submit" id="entrar">Entrar</button>
+  <div class="msg" id="msg" role="alert"></div>
+</form>
+<main class="wrap hidden" id="painel">
+  <div class="filters">
+    <div class="fgroup"><span class="flabel">Empreendimento</span><div class="seg" id="fEmp" role="group" aria-label="Empreendimento"></div></div>
+    <div class="fgroup"><span class="flabel">Despesa</span><div class="seg" id="fGrp" role="group" aria-label="Despesa"></div></div>
+  </div>
+  <section class="tiles" id="tiles"></section>
+  <section class="card">
+    <h2 id="chTitle">Gasto mensal</h2>
+    <p class="sub">R$ mil · meses fechados, mês em andamento (realizado até o corte) e previsto dos próximos meses</p>
+    <div class="legend" id="legend"></div>
+    <div id="chart"><div class="tip" id="tip"></div></div>
+  </section>
+  <section class="card">
+    <h2 id="tbTitle">Por empreendimento</h2>
+    <p class="sub">R$ mil · Saldo = previsto − realizado (negativo = gasto acima do previsto)</p>
+    <div class="scroll"><table id="tbl"></table></div>
+  </section>
+  <section class="card">
+    <h2>Lançamentos a partir do mês em andamento</h2>
+    <p class="sub">Títulos da BASE TEMPLATE (Considera = S). Programado = data caixa depois do corte, ainda fora do realizado.</p>
+    <input class="search" id="q" type="search" placeholder="Buscar credor, conta ou título" aria-label="Buscar lançamentos">
+    <div class="scroll"><table id="lanc"></table></div>
+    <p class="foot" id="lancFoot"></p>
+  </section>
+  <p class="foot">Fonte: Fluxo de Caixa Grupo Carozzo (aba Base) e BASE TEMPLATE BUDGETv5 (aba Realizado). Dados criptografados; gerado automaticamente.</p>
+</main>
+<script>
+const MESES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const MESES_L=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const fmtMil=v=>(v/1000).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const fmtR=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const fmtD=s=>{const[y,m,d]=s.split("-");return `${d}/${m}/${y}`};
+const mesNome=m=>{const[y,mm]=m.split("-");return `${MESES_L[+mm-1]}/${y}`};
+const mesCurto=m=>MESES[+m.split("-")[1]-1];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let D, st={emp:"Todos",grp:"Ambos"};
+try{const s=JSON.parse(localStorage.getItem("mkt-filtros")||"null"); if(s) st=s;}catch(e){}
+
+const b64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+let PACOTE=null;
+async function carregarPacote(){if(PACOTE) return PACOTE;
+  const r=await fetch("data/marketing.enc.json",{cache:"no-store"}); if(!r.ok) throw new Error("arquivo de dados não encontrado ("+r.status+")");
+  return PACOTE=await r.json();}
+async function abrir(senha){
+  const p=await carregarPacote();
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(senha),"PBKDF2",false,["deriveKey"]);
+  const chave=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b64(p.salt),iterations:p.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const claro=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64(p.iv)},chave,b64(p.dados));
+  return JSON.parse(new TextDecoder().decode(claro));}
+const lock=document.getElementById("lock"), painel=document.getElementById("painel"), msg=document.getElementById("msg"), btn=document.getElementById("entrar");
+async function tentar(senha,lembrar){
+  btn.disabled=true; msg.textContent=""; btn.textContent="Abrindo...";
+  try{ D=await abrir(senha);
+    if(lembrar){try{sessionStorage.setItem("mkt-senha",senha)}catch(e){}}
+    lock.classList.add("hidden"); painel.classList.remove("hidden"); document.getElementById("sair").classList.remove("hidden"); init();
+  }catch(e){ msg.textContent = (e && e.name==="OperationError") ? "Senha incorreta." : "Não foi possível abrir os dados: "+(e.message||e);
+    try{sessionStorage.removeItem("mkt-senha")}catch(_){}
+  }finally{btn.disabled=false; btn.textContent="Entrar";}}
+lock.addEventListener("submit",ev=>{ev.preventDefault();tentar(document.getElementById("senha").value,document.getElementById("lembrar").checked)});
+document.getElementById("sair").onclick=()=>{try{sessionStorage.removeItem("mkt-senha")}catch(e){} location.reload();};
+try{const s=sessionStorage.getItem("mkt-senha"); if(s) tentar(s,true);}catch(e){}
+if(!window.crypto||!crypto.subtle){msg.textContent="Abra o painel pelo endereço https do GitHub Pages (o navegador bloqueia a descriptografia fora do https).";}
+
+function init(){
+  if(!["Todos",...D.empreendimentos].includes(st.emp)) st.emp="Todos";
+  if(!["Ambos",...D.grupos].includes(st.grp)) st.grp="Ambos";
+  document.getElementById("stamp").innerHTML=`Atualizado em ${fmtD(D.data_atualizacao)}<br>Realizado até ${fmtD(D.corte)}`;
+  seg("fEmp",["Todos",...D.empreendimentos],"emp");
+  seg("fGrp",["Ambos",...D.grupos],"grp");
+  document.getElementById("q").addEventListener("input",renderLanc);
+  render();
+  window.addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(renderChart,120)});
+}
+function seg(id,opts,key){
+  const el=document.getElementById(id);
+  el.innerHTML=opts.map(o=>`<button type="button" aria-pressed="${st[key]===o}">${esc(o)}</button>`).join("");
+  el.querySelectorAll("button").forEach((b,i)=>b.onclick=()=>{st[key]=opts[i];
+    try{localStorage.setItem("mkt-filtros",JSON.stringify(st))}catch(e){}
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));render();});
+}
+const okE=e=>st.emp==="Todos"||e===st.emp;
+const okG=g=>st.grp==="Ambos"||g===st.grp;
+const grpsAtivos=()=>D.grupos.filter(okG);
+function soma(filtro,campo){return D.serie.filter(s=>okE(s.empreendimento)&&okG(s.grupo)&&filtro(s)).reduce((a,s)=>a+(s[campo]||0),0)}
+function render(){renderTiles();renderChart();renderTable();renderLanc()}
+
+function renderTiles(){
+  const m=D.mes_atual, y=m.slice(0,4);
+  const prox=D.serie.map(s=>s.mes).filter(x=>x>m).sort()[0];
+  const prev=soma(s=>s.mes===m,"previsto"), real=soma(s=>s.mes===m,"realizado"), saldo=prev-real;
+  const pct=prev?real/prev:null;
+  const ano=soma(s=>s.mes.startsWith(y)&&s.status!=="previsto","realizado");
+  const pProx=prox?soma(s=>s.mes===prox,"previsto"):0;
+  document.getElementById("tiles").innerHTML=`
+   <div class="tile"><div class="k">Previsto · ${mesNome(m)}</div><div class="v">R$ ${fmtMil(prev)} mil</div><div class="s">orçado no fluxo de caixa</div></div>
+   <div class="tile"><div class="k">Realizado até ${fmtD(D.corte).slice(0,5)}</div><div class="v">R$ ${fmtMil(real)} mil</div>
+     <div class="s">${pct==null?"sem previsto no mês":(pct*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"% do previsto"}</div>
+     <div class="meter" aria-hidden="true"><i style="width:${Math.min(100,(pct||0)*100)}%"></i></div></div>
+   <div class="tile"><div class="k">${saldo<0?"Acima do previsto":"Saldo a realizar"}</div><div class="v ${saldo<0?"over":""}">R$ ${fmtMil(Math.abs(saldo))} mil</div><div class="s">previsto − realizado no mês</div></div>
+   <div class="tile"><div class="k">Previsto · ${prox?mesNome(prox):"—"}</div><div class="v">R$ ${fmtMil(pProx)} mil</div><div class="s">próximo mês</div></div>
+   <div class="tile"><div class="k">Realizado em ${y}</div><div class="v">R$ ${fmtMil(ano)} mil</div><div class="s">meses fechados + mês em andamento</div></div>`;
+}
+
+function renderChart(){
+  const box=document.getElementById("chart"), tip=document.getElementById("tip");
+  const gs=grpsAtivos(), cores={[D.grupos[0]]:"var(--s1)",[D.grupos[1]]:"var(--s2)"};
+  document.getElementById("chTitle").textContent=`Gasto mensal · ${st.emp==="Todos"?"todos os empreendimentos":st.emp}`;
+  document.getElementById("legend").innerHTML=gs.map(g=>`<span><i class="sw" style="background:${cores[g]}"></i>${esc(g)} (realizado)</span>`).join("")+
+    `<span><i class="sw out"></i>Previsto (mês em andamento e futuros)</span>`;
+  const meses=[...new Set(D.serie.map(s=>s.mes))].sort();
+  const rows=meses.map(m=>{const o={mes:m,status:null,prev:0,parts:[]};
+    gs.forEach(g=>{const it=D.serie.filter(s=>s.mes===m&&s.grupo===g&&okE(s.empreendimento));
+      const r=it.reduce((a,s)=>a+(s.realizado||0),0), p=it.reduce((a,s)=>a+(s.previsto||0),0);
+      o.status=it[0]?.status; o.prev+=p; o.parts.push({g,r,p});});
+    o.real=o.parts.reduce((a,x)=>a+x.r,0); return o;});
+  const W=Math.max(320,box.clientWidth), H=Math.round(Math.min(340,Math.max(240,W*.36)));
+  const m={l:52,r:8,t:12,b:28}, iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const max=Math.max(1,...rows.map(o=>Math.max(o.real,o.status==="fechado"?0:o.prev)));
+  const step=niceStep(max/4), top=Math.ceil(max/step)*step;
+  const y=v=>m.t+ih-(Math.max(0,v)/top)*ih, bw=iw/rows.length, w=Math.max(6,Math.min(44,bw*.58));
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gasto mensal em R$ mil">`;
+  for(let v=0;v<=top+1e-9;v+=step){s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>
+     <text x="${m.l-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${(v/1000).toLocaleString("pt-BR")}</text>`;}
+  rows.forEach((o,i)=>{const cx=m.l+bw*i+bw/2, x0=cx-w/2; let acc=0;
+    if(o.status!=="previsto"){o.parts.forEach((p,k)=>{if(p.r<=0)return;const y1=y(acc+p.r),y0=y(acc);
+        const h=Math.max(0,y0-y1-(acc>0?2:0)); const isTop=o.parts.slice(k+1).every(q=>q.r<=0);
+        s+=bar(x0,y1,w,h,isTop?4:0,cores[p.g]); acc+=p.r;});}
+    if(o.status!=="fechado"&&o.prev>0){s+=`<rect x="${x0+1}" y="${y(o.prev)}" width="${w-2}" height="${y(0)-y(o.prev)}" rx="4" fill="none" stroke="var(--text-2)" stroke-width="2" stroke-dasharray="4 3"/>`;}
+    s+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11" fill="${o.mes===D.mes_atual?"var(--text)":"var(--muted)"}" ${o.mes===D.mes_atual?'font-weight="700"':""}>${mesCurto(o.mes)}</text>`;
+    s+=`<rect class="hit" data-i="${i}" x="${m.l+bw*i}" y="${m.t}" width="${bw}" height="${ih}" fill="transparent"/>`;});
+  s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--text-2)" stroke-width="1"/></svg>`;
+  box.innerHTML=s; box.appendChild(tip);
+  box.querySelectorAll(".hit").forEach(h=>{
+    h.addEventListener("mousemove",ev=>{const o=rows[+h.dataset.i];
+      const st_={fechado:"Fechado",["em andamento"]:`Em andamento (até ${fmtD(D.corte).slice(0,5)})`,previsto:"Previsto"}[o.status]||"";
+      tip.innerHTML=`<b>${mesNome(o.mes)} · ${st_}</b>`+o.parts.map(p=>`<div class="r"><span>${esc(p.g)}</span><span>${o.status==="previsto"?"prev. "+fmtMil(p.p):fmtMil(p.r)}</span></div>`).join("")+
+        (o.status!=="fechado"?`<div class="r"><span>Previsto total</span><span>${fmtMil(o.prev)}</span></div>`:"")+
+        (o.status!=="previsto"?`<div class="r"><span>Realizado total</span><span>${fmtMil(o.real)}</span></div>`:"");
+      tip.style.display="block"; const bx=box.getBoundingClientRect();
+      let lx=ev.clientX-bx.left+14; if(lx+190>bx.width) lx=ev.clientX-bx.left-200; tip.style.left=lx+"px"; tip.style.top=(ev.clientY-bx.top-10)+"px";});
+    h.addEventListener("mouseleave",()=>tip.style.display="none");});
+}
+function bar(x,y,w,h,r,fill){if(h<=0)return"";r=Math.min(r,h,w/2);
+  return `<path d="M${x},${y+h} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${y+h} Z" fill="${fill}"/>`;}
+function niceStep(v){const p=Math.pow(10,Math.floor(Math.log10(v||1))),n=v/p;return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p;}
+
+function renderTable(){
+  const m=D.mes_atual,y=m.slice(0,4), prox=D.serie.map(s=>s.mes).filter(x=>x>m).sort()[0];
+  document.getElementById("tbTitle").textContent=`Por empreendimento · ${mesNome(m)}`;
+  const linhas=[];
+  D.empreendimentos.filter(okE).forEach(e=>grpsAtivos().forEach(g=>{
+    const it=D.serie.filter(s=>s.empreendimento===e&&s.grupo===g);
+    const a=it.find(s=>s.mes===m)||{}, n=it.find(s=>s.mes===prox)||{};
+    const ano=it.filter(s=>s.mes.startsWith(y)&&s.status!=="previsto").reduce((t,s)=>t+(s.realizado||0),0);
+    linhas.push({e,g,p:a.previsto||0,r:a.realizado||0,n:n.previsto||0,ano});}));
+  const tot=linhas.reduce((t,l)=>({p:t.p+l.p,r:t.r+l.r,n:t.n+l.n,ano:t.ano+l.ano}),{p:0,r:0,n:0,ano:0});
+  const row=(l,cls="")=>{const sd=l.p-l.r, pc=l.p?Math.round(l.r/l.p*100)+"%":"—";
+    return `<tr class="${cls}"><td>${esc(l.e)}</td><td class="l">${esc(l.g||"")}</td><td>${fmtMil(l.p)}</td><td>${fmtMil(l.r)}</td><td class="${sd<0?"over":""}">${fmtMil(sd)}</td><td>${pc}</td><td>${fmtMil(l.n)}</td><td>${fmtMil(l.ano)}</td></tr>`};
+  document.getElementById("tbl").innerHTML=`<thead><tr><th>Empreendimento</th><th class="l">Despesa</th><th>Previsto</th><th>Realizado</th><th>Saldo</th><th>% exec.</th><th>Previsto ${prox?mesCurto(prox):""}</th><th>Realizado ${y}</th></tr></thead>
+   <tbody>${linhas.map(l=>row(l)).join("")}${linhas.length>1?row({e:"Total",g:"",...tot},"tot"):""}</tbody>`;
+}
+function renderLanc(){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  const L=D.lancamentos.filter(l=>okE(l.empreendimento)&&okG(l.grupo)&&(!q||[l.credor,l.conta,l.titulo].join(" ").toLowerCase().includes(q)));
+  const cls={"Conciliado":"c","Não conciliado":"n","Programado":"p"};
+  document.getElementById("lanc").innerHTML=`<thead><tr><th class="l">Data caixa</th><th class="l">Empreendimento</th><th class="l">Despesa</th><th class="l">Credor</th><th class="l">Conta</th><th class="l">Título</th><th>Valor</th><th class="l">Situação</th></tr></thead><tbody>`+
+    (L.length?L.map(l=>`<tr><td class="l">${fmtD(l.data)}</td><td class="l">${esc(l.empreendimento)}</td><td class="l">${esc(l.grupo)}</td><td class="l">${esc(l.credor)}</td><td class="l">${esc(l.conta)}</td><td class="l">${esc(l.titulo)}</td><td>${fmtR(l.valor)}</td><td class="l"><span class="badge ${cls[l.situacao]||""}">${esc(l.situacao)}</span></td></tr>`).join("")
+     :`<tr><td colspan="8" class="l">Nenhum lançamento para o filtro.</td></tr>`)+`</tbody>`;
+  const t=L.filter(l=>l.situacao!=="Programado").reduce((a,l)=>a+l.valor,0), p=L.filter(l=>l.situacao==="Programado").reduce((a,l)=>a+l.valor,0);
+  document.getElementById("lancFoot").textContent=`${L.length} lançamentos · realizado ${fmtR(t)} · programado ${fmtR(p)}`;
+}
+</script>
+</body>
+</html>
