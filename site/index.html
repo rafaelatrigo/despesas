@@ -49,7 +49,9 @@ h1{margin:0;font-size:20px;font-weight:650;color:var(--text)}
 .btn:disabled{opacity:.6;cursor:wait}
 .btn:focus-visible,.fbtn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .layout{max-width:1360px;margin:0 auto;padding:18px 16px 40px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
-aside{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;position:sticky;top:12px}
+aside{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+aside::-webkit-scrollbar{width:8px} aside::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px} aside::-webkit-scrollbar-track{background:transparent}
+.menu-tit{margin:0 0 8px;font-size:13px;font-weight:800;letter-spacing:.14em;color:var(--brand)}
 aside h3{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
 .fsec{margin-bottom:16px}.fsec:last-child{margin-bottom:0}
 .fgrid{display:flex;flex-wrap:wrap;gap:6px}
@@ -111,7 +113,7 @@ td.ind{padding-left:26px;color:var(--text-2)}
 details.fbox>summary{display:none}
 @media (max-width:900px){
   .layout{grid-template-columns:minmax(0,1fr)}
-  aside{position:static;padding:0;border:0;background:transparent}
+  aside{position:static;padding:0;border:0;background:transparent;max-height:none;overflow:visible}
   details.fbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
   details.fbox>summary{display:block;cursor:pointer;font-weight:600}
   details.fbox[open]>summary{margin-bottom:10px}
@@ -147,7 +149,8 @@ details.fbox>summary{display:none}
 <div class="layout hidden" id="painel">
   <aside>
     <details class="fbox" id="fbox" open>
-      <summary>Filtros</summary>
+      <summary>MENU · filtros</summary>
+      <div class="menu-tit">MENU</div>
       <span class="perfil" id="perfil"></span>
       <p style="margin:0 0 12px;font-size:12px;color:var(--muted)">Clique para filtrar. Clique em mais de um para combinar.</p>
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
