@@ -72,7 +72,7 @@ if "--data" in sys.argv: hoje = datetime.date.fromisoformat(sys.argv[sys.argv.in
 corte = hoje - datetime.timedelta(days=(hoje.weekday() - 4) % 7)   # sexta mais recente (inclui hoje, se for sexta)
 mes_corte = f"{corte:%Y-%m}"
 _anos = cfg.get("anos", "auto")
-anos = ({corte.year - 1, corte.year, corte.year + 1} if _anos == "auto" else set(_anos))   # auto: ano anterior, atual e seguinte
+anos = ({corte.year, corte.year + 1} if _anos == "auto" else set(_anos))   # auto: ano vigente e o seguinte
 
 # ---------- só roda se algo mudou (modo agendado) ----------
 assinatura_arq = AQUI / ".assinatura"
