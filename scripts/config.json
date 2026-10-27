@@ -305,9 +305,6 @@
     "aba": "Base Fluxo",
     "coluna_empresa": "Empresa",
     "coluna_grupo": "Grupo Fechamento",
-    "meses": [
-      "2026-11",
-      "2026-12"
-    ]
+    "meses": []
   }
 }
