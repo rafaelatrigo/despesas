@@ -99,6 +99,22 @@ td.ind{padding-left:26px;color:var(--text-2)}
 .badge.c::before{background:var(--good)} .badge.n::before{background:var(--warn)} .badge.p::before{background:var(--brand)}
 .neg{color:var(--crit);font-weight:600}
 .neg::before{content:"▼ ";font-size:10px}
+.thf{display:inline-flex;align-items:center;gap:6px}
+.fbt{border:1px solid transparent;background:transparent;color:var(--muted);border-radius:4px;padding:0 4px;font-size:11px;line-height:16px;cursor:pointer}
+.fbt:hover{border-color:var(--line);color:var(--text)}
+.fbt.on{background:var(--brand);color:var(--brand-ink)}
+.xpop{position:absolute;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);width:270px;padding:10px;font-size:13px;text-align:left}
+.xpop .ord{display:flex;gap:6px;margin-bottom:8px}
+.xpop .ord button,.xpop .rod button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:6px;padding:5px;font:inherit;font-size:12px;cursor:pointer}
+.xpop .ord button.on{background:var(--brand-2);border-color:var(--brand)}
+.xpop input[type=search],.xpop input[type=number]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit;font-size:12px;margin-bottom:6px}
+.xpop .lst{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:4px 6px;margin-bottom:8px}
+.xpop label{display:flex;gap:6px;align-items:flex-start;padding:2px 0;cursor:pointer;font-size:12px;white-space:normal}
+.xpop label span.n{margin-left:auto;color:var(--muted)}
+.xpop input[type=checkbox]{accent-color:var(--brand);margin-top:2px}
+.xpop .rod{display:flex;gap:6px}
+.xpop .rod button.ok{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.limpar{border:0;background:none;color:var(--brand);text-decoration:underline;cursor:pointer;font:inherit;font-size:12px;padding:0;margin-left:10px}
 .search{width:100%;max-width:320px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;margin-bottom:10px}
 .foot{color:var(--muted);font-size:12px;margin-top:8px}
 .toast{position:fixed;right:16px;bottom:16px;background:var(--text);color:var(--surface);padding:10px 14px;border-radius:8px;font-size:13px;display:none;z-index:9}
@@ -182,7 +198,7 @@ details.fbox>summary{display:none}
       <p class="sub">Títulos da BASE TEMPLATE (Considera = S). Programado = data caixa depois do corte, ainda fora do realizado.</p>
       <input class="search" id="q" type="search" placeholder="Buscar credor, conta ou título" aria-label="Buscar lançamentos">
       <div class="scroll"><table id="lanc"></table></div>
-      <p class="foot" id="lancFoot"></p>
+      <p class="foot"><span id="lancFoot"></span><button class="limpar hidden" id="limparLanc" type="button">Limpar filtros da tabela</button></p>
     </section>
     <p class="foot" id="fontes"></p>
   </main>
@@ -419,15 +435,72 @@ function renderDRE(){
 }
 
 /* ---------- lançamentos ---------- */
+/* ---------- lançamentos com filtro de coluna estilo Excel ---------- */
+const COLS=[{k:"data",n:"Data caixa",f:l=>fmtD(l.data),ord:l=>l.data},{k:"empreendimento",n:"Empreendimento"},{k:"grupo",n:"Despesa"},
+  {k:"credor",n:"Credor"},{k:"conta",n:"Conta"},{k:"titulo",n:"Título"},{k:"valor",n:"Valor",num:true},{k:"situacao",n:"Situação"}];
+const XF={sel:{},min:null,max:null,sort:{k:"data",dir:-1}};
+const txtC=(c,l)=>c.f?c.f(l):String(l[c.k]??"");
+function passa(l,exceto){
+  for(const c of COLS){ if(c.k===exceto) continue;
+    if(c.num){ if(XF.min!=null&&l.valor<XF.min) return false; if(XF.max!=null&&l.valor>XF.max) return false; continue; }
+    const sel=XF.sel[c.k]; if(sel&&!sel.has(txtC(c,l))) return false; }
+  return true;
+}
+function baseLanc(){const q=$("q").value.trim().toLowerCase();
+  return D.lancamentos.filter(l=>okE(l.empreendimento)&&okG(l.grupo)&&(!q||[l.credor,l.conta,l.titulo].join(" ").toLowerCase().includes(q)));}
 function renderLanc(){
-  const q=$("q").value.trim().toLowerCase();
-  const L=D.lancamentos.filter(l=>okE(l.empreendimento)&&okG(l.grupo)&&(!q||[l.credor,l.conta,l.titulo].join(" ").toLowerCase().includes(q)));
+  const B=baseLanc(), L=B.filter(l=>passa(l,null));
+  const c0=COLS.find(c=>c.k===XF.sort.k), kf=c0.num?(l=>l.valor):(c0.ord||(l=>txtC(c0,l).toLowerCase()));
+  L.sort((x,y)=>{const a=kf(x),b=kf(y);return (a<b?-1:a>b?1:0)*XF.sort.dir;});
   const cls={"Conciliado":"c","Não conciliado":"n","Programado":"p"};
-  $("lanc").innerHTML=`<thead><tr><th class="l">Data caixa</th><th class="l">Empreendimento</th><th class="l">Despesa</th><th class="l">Credor</th><th class="l">Conta</th><th class="l">Título</th><th>Valor</th><th class="l">Situação</th></tr></thead><tbody>`+
+  const ativo=c=>c.num?(XF.min!=null||XF.max!=null):!!XF.sel[c.k];
+  const seta=c=>XF.sort.k===c.k?(XF.sort.dir>0?" ↑":" ↓"):"";
+  $("lanc").innerHTML=`<thead><tr>${COLS.map(c=>`<th class="${c.num?"":"l"}"><span class="thf">${c.n}${seta(c)}<button type="button" class="fbt ${ativo(c)?"on":""}" data-k="${c.k}" aria-label="Filtrar ${c.n}" title="Filtrar e ordenar">${ativo(c)?"▼•":"▼"}</button></span></th>`).join("")}</tr></thead><tbody>`+
     (L.length?L.map(l=>`<tr><td class="l">${fmtD(l.data)}</td><td class="l">${esc(l.empreendimento)}</td><td class="l">${esc(l.grupo)}</td><td class="l">${esc(l.credor)}</td><td class="l">${esc(l.conta)}</td><td class="l">${esc(l.titulo)}</td><td>${fmtR(l.valor)}</td><td class="l"><span class="badge ${cls[l.situacao]||""}">${esc(l.situacao)}</span></td></tr>`).join("")
      :`<tr><td colspan="8" class="l">Nenhum lançamento para o filtro.</td></tr>`)+`</tbody>`;
-  const t=L.filter(l=>l.situacao!=="Programado").reduce((a,l)=>a+l.valor,0);
-  $("lancFoot").textContent=`${L.length} lançamentos · realizado ${fmtR(t)}`;
+  $("lanc").querySelectorAll(".fbt").forEach(bt=>bt.onclick=ev=>{ev.stopPropagation(); abrirFiltro(bt);});
+  const real=L.filter(l=>l.situacao!=="Programado").reduce((a,l)=>a+l.valor,0), prog=L.filter(l=>l.situacao==="Programado").reduce((a,l)=>a+l.valor,0);
+  $("lancFoot").textContent=`${L.length} de ${B.length} lançamentos · realizado ${fmtR(real)}${prog?` · programado ${fmtR(prog)}`:""}`;
+  $("limparLanc").classList.toggle("hidden",!COLS.some(ativo));
+}
+$("limparLanc").onclick=()=>{XF.sel={};XF.min=XF.max=null;fecharFiltro();renderLanc();};
+let POP=null;
+function fecharFiltro(){ if(POP){POP.remove();POP=null;} }
+document.addEventListener("click",e=>{ if(POP&&!POP.contains(e.target)) fecharFiltro(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") fecharFiltro(); });
+function abrirFiltro(bt){
+  const jaAberto=POP&&POP.dataset.k===bt.dataset.k; fecharFiltro(); if(jaAberto) return;
+  const c=COLS.find(x=>x.k===bt.dataset.k), pop=document.createElement("div"); pop.className="xpop"; pop.dataset.k=c.k;
+  const ordTxt=c.num?["Menor → maior","Maior → menor"]:(c.k==="data"?["Mais antigo","Mais recente"]:["A → Z","Z → A"]);
+  let h=`<div class="ord"><button type="button" data-d="1" class="${XF.sort.k===c.k&&XF.sort.dir===1?"on":""}">${ordTxt[0]}</button><button type="button" data-d="-1" class="${XF.sort.k===c.k&&XF.sort.dir===-1?"on":""}">${ordTxt[1]}</button></div>`;
+  if(c.num){
+    h+=`<input type="number" step="0.01" id="xmin" placeholder="Valor mínimo (R$)" value="${XF.min??""}"><input type="number" step="0.01" id="xmax" placeholder="Valor máximo (R$)" value="${XF.max??""}">`;
+  }else{
+    const cont=new Map(); baseLanc().filter(l=>passa(l,c.k)).forEach(l=>{const v=txtC(c,l); cont.set(v,(cont.get(v)||0)+1);});
+    let vals=[...cont.keys()]; vals.sort(c.k==="data"?((a,b)=>a.split("/").reverse().join("")<b.split("/").reverse().join("")?1:-1):((a,b)=>a.localeCompare(b,"pt-BR")));
+    const sel=XF.sel[c.k];
+    h+=`<input type="search" id="xbusca" placeholder="Pesquisar"><div class="lst"><label><input type="checkbox" id="xtudo" ${!sel?"checked":""}><b>(Selecionar tudo)</b></label>`+
+       vals.map(v=>`<label><input type="checkbox" class="xv" value="${esc(v)}" ${!sel||sel.has(v)?"checked":""}><span>${esc(v||"(vazio)")}</span><span class="n">${cont.get(v)}</span></label>`).join("")+`</div>`;
+  }
+  h+=`<div class="rod"><button type="button" id="xlimpa">Limpar</button><button type="button" class="ok" id="xok">OK</button></div>`;
+  pop.innerHTML=h; document.body.appendChild(pop); POP=pop;
+  const r=bt.getBoundingClientRect(); let left=r.left+window.scrollX-10; left=Math.min(left,window.scrollX+document.documentElement.clientWidth-280); pop.style.left=Math.max(8,left)+"px"; pop.style.top=(r.bottom+window.scrollY+6)+"px";
+  pop.addEventListener("click",e=>e.stopPropagation());
+  pop.querySelectorAll(".ord button").forEach(b=>b.onclick=()=>{XF.sort={k:c.k,dir:+b.dataset.d}; fecharFiltro(); renderLanc();});
+  if(!c.num){
+    const tudo=pop.querySelector("#xtudo"), itens=[...pop.querySelectorAll(".xv")];
+    tudo.onchange=()=>itens.forEach(i=>{ if(i.closest("label").style.display!=="none") i.checked=tudo.checked; });
+    itens.forEach(i=>i.onchange=()=>{tudo.checked=itens.every(x=>x.checked);});
+    pop.querySelector("#xbusca").oninput=e=>{const t=e.target.value.toLowerCase(); itens.forEach(i=>{const vis=!t||i.value.toLowerCase().includes(t); i.closest("label").style.display=vis?"":"none"; if(t) i.checked=vis;}); tudo.checked=itens.every(x=>x.checked);};
+    pop.querySelector("#xbusca").focus();
+  }
+  pop.querySelector("#xlimpa").onclick=()=>{ if(c.num){XF.min=XF.max=null;} else delete XF.sel[c.k]; fecharFiltro(); renderLanc(); };
+  pop.querySelector("#xok").onclick=()=>{
+    if(c.num){ const mn=pop.querySelector("#xmin").value, mx=pop.querySelector("#xmax").value; XF.min=mn===""?null:+mn; XF.max=mx===""?null:+mx; }
+    else{ const itens=[...pop.querySelectorAll(".xv")], marc=itens.filter(i=>i.checked).map(i=>i.value);
+      if(marc.length===itens.length) delete XF.sel[c.k]; else XF.sel[c.k]=new Set(marc); }
+    fecharFiltro(); renderLanc(); };
+  pop.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); pop.querySelector("#xok").click(); } });
 }
 </script>
 </body>
