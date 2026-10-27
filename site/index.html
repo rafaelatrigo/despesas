@@ -67,9 +67,14 @@ aside h3{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:upper
 .tile .k{font-size:11px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .v{font-size:clamp(15px,1.35vw,19px);font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tile .v small{font-size:11px;font-weight:500;color:var(--muted);margin-left:3px}
-.tile .s{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .s{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:1180px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:560px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.alerta{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 7px;font-weight:600}
+.alerta.warn{background:#fbf0d4;color:#7a5200}
+.alerta.crit{background:#f8dedb;color:#a1352d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .alerta.warn{background:#3a2f12;color:#f0c75e} :root:not([data-theme="light"]) .alerta.crit{background:#3d1d1a;color:#f19a90}}
+:root[data-theme="dark"] .alerta.warn{background:#3a2f12;color:#f0c75e} :root[data-theme="dark"] .alerta.crit{background:#3d1d1a;color:#f19a90}
 .meter{height:4px;background:var(--surface-2);border-radius:3px;margin-top:5px;overflow:hidden}
 .meter i{display:block;height:100%;background:var(--brand);border-radius:3px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
@@ -336,6 +341,14 @@ function soma(f,c){return D.serie.filter(s=>okE(s.empreendimento)&&okG(s.grupo)&
 function render(){renderTiles();renderChart();renderTable();renderDRE();renderLanc()}
 
 /* ---------- quadros ---------- */
+/* % do realizado sobre o previsto do ano: até 90% cor padrão, acima de 90% amarelo, acima de 100% vermelho (sempre com ícone + texto) */
+function alertaAno(real,prev){
+  if(!prev) return "acumulado no ano";
+  const pc=real/prev*100, n=pc.toLocaleString("pt-BR",{maximumFractionDigits:0})+"%";
+  if(pc>100) return `<span class="alerta crit" title="Realizado acima do previsto do ano (${n})">▲ ${n} · estourou</span>`;
+  if(pc>90)  return `<span class="alerta warn" title="Realizado acima de 90% do previsto do ano (${n})">⚠ ${n} do previsto</span>`;
+  return `${n} do previsto do ano`;
+}
 function renderTiles(){
   const m=D.mes_atual, y=m.slice(0,4), prox=[...new Set(D.serie.map(s=>s.mes))].filter(x=>x>m).sort()[0];
   const prev=soma(s=>s.mes===m,"previsto"), real=soma(s=>s.mes===m,"realizado"), saldo=prev-real, pct=prev?real/prev:null;
@@ -353,7 +366,7 @@ const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
    <div class="tile" title="Previsto − realizado no mês"><div class="k">${saldo<0?"Acima do previsto":"Saldo a realizar"}</div><div class="v ${saldo<0?"neg":""}">${V(Math.abs(saldo))}</div><div class="s">previsto − realizado</div></div>
    <div class="tile" title="Títulos com data caixa depois do corte${progTot!==progMes?` · total com meses seguintes: R$ ${fmtMil(progTot)} mil`:""}"><div class="k">Programado após ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(progMes)}</div><div class="s">${nProg} títulos no mês</div></div>
    <div class="tile" title="Soma do previsto no fluxo de caixa para todos os meses de ${y} (meses fechados pelo valor do fluxo + meses em aberto pelo orçado)"><div class="k">Previsto ${y}</div><div class="v">${V(prevAno)}</div><div class="s">fluxo de caixa · ano inteiro</div></div>
-   <div class="tile" title="Meses fechados + mês em andamento"><div class="k">Realizado ${y}</div><div class="v">${V(ano)}</div><div class="s">${prevAno?(ano/prevAno*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"% do previsto do ano":"acumulado no ano"}</div></div>`;
+   <div class="tile" title="Meses fechados + mês em andamento"><div class="k">Realizado ${y}</div><div class="v">${V(ano)}</div><div class="s">${alertaAno(ano,prevAno)}</div></div>`;
 }
 
 /* ---------- gráfico (ligado à tabela de lançamentos) ---------- */
