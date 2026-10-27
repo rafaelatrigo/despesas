@@ -83,7 +83,10 @@ def mais_recente(pasta, padrao):
 
 def assinatura_pastas(c):
     out = []
-    for pasta, padrao in ((c["pasta_budget"], c["padrao_budget"]), (c["pasta_fluxo"], c["padrao_fluxo"])):
+    fontes = [(c["pasta_budget"], c["padrao_budget"]), (c["pasta_fluxo"], c["padrao_fluxo"])]
+    ps = c.get("previsto_sistema") or {}
+    if ps.get("meses"): fontes.append((ps["pasta"], ps["padrao"]))
+    for pasta, padrao in fontes:
         f = mais_recente(pasta, padrao)
         out.append((f.name, f.stat().st_mtime) if f else None)
     return out

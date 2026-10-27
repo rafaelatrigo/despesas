@@ -329,7 +329,7 @@ function init(){
   lista("fGrp","grps",D.grupos,"Todas",cor);
   lista("fAno","anos",ANOS(),"Todos");
   if(window.matchMedia("(max-width:900px)").matches) $("fbox").open=false;
-  $("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base). Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S e N, por data caixa). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
+  $("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base)${D.fontes.previsto_sistema?`; ${(D.fontes.meses_sistema||[]).map(mesNome).join(" e ")} pelo previsto do sistema (${D.fontes.previsto_sistema})`:""}. Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S e N, por data caixa). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
   if(D.dre) $("tiles").after($("dreCard"));   /* acesso completo: DRE logo abaixo dos quadros */
   XF.meses=mesPadrao();
   if(TOQUE) $("dica").textContent="Toque para filtrar. Toque em mais de um para combinar.";

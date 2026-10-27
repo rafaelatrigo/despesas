@@ -5,6 +5,8 @@ De onde vem cada número:
 - PREVISTO: o Fluxo de Caixa modificado por último em "pasta_fluxo" (config.json), aba Base,
   todas as linhas (como as fórmulas SOMASES das abas DFC), por empresa, grupo fechamento, tipo (Operacional/Financiamento) e mês
   (anos definidos em "anos" no config, por exemplo 2026 e 2027).
+- PREVISTO DO SISTEMA: para os meses em "previsto_sistema.meses" (ex.: 2026-11 e 2026-12), o previsto vem
+  do relatório de previstos mais recente (aba Base Fluxo), no lugar do fluxo de caixa.
 - REALIZADO e LANÇAMENTOS: a BASE TEMPLATE BUDGET modificada por último em "pasta_budget",
   aba Realizado, com Considera = S, conciliado S e N, somando VALOR_V3 por DATA CAIXA.
   - Meses anteriores ao mês do corte: mês fechado, soma o mês inteiro.
@@ -79,7 +81,11 @@ assinatura_arq = AQUI / ".assinatura"
 if "--se-mudou" in sys.argv:
     f1 = candidatos(cfg["pasta_fluxo"], cfg["padrao_fluxo"])[0]
     f2 = candidatos(cfg["pasta_budget"], cfg["padrao_budget"])[0]
+    _ps = cfg.get("previsto_sistema") or {}
+    try: f3 = candidatos(_ps["pasta"], _ps["padrao"])[0] if _ps.get("meses") else None
+    except SystemExit: f3 = None
     assin = hashlib.sha256(json.dumps([f1.name, f1.stat().st_mtime, f2.name, f2.stat().st_mtime, corte.isoformat(),
+                                       f3.name if f3 else None, f3.stat().st_mtime if f3 else None,
                                        arq_cfg.read_text(encoding="utf-8-sig")]).encode()).hexdigest()
     if assinatura_arq.exists() and assinatura_arq.read_text().strip() == assin:
         print(f"Sem alterações nas bases desde a última publicação ({f1.name} / {f2.name}). Nada a fazer.")
@@ -111,8 +117,10 @@ for c in ("Nome empresa", "Tipo análise", "Tipo", "GRUPO FECHAMENTO"):
 bC, bB, bJ, bL = bix["Nome empresa"], bix["Tipo análise"], bix["Tipo"], bix["GRUPO FECHAMENTO"]
 prev_g = defaultdict(float)     # (emp, grupo_nome, mes) -> gasto positivo
 prev_d = defaultdict(float)     # (emp, linha_dre, mes) -> valor com sinal (entrada +, saída -)
+tipo_grupo = defaultdict(lambda: defaultdict(int))   # grupo -> tipo (Operacional/Financiamento) visto no fluxo
 for r in rows:
     e, g, tipo = txt(r[bC]), txt(r[bL]), txt(r[bJ])
+    if g and tipo: tipo_grupo[g][tipo] += 1
     if e not in emp_fluxo: continue   # todas as linhas da Base, como as fórmulas das abas DFC
     lid = linha_de(g, tipo)
     for m, i in mes_cols.items():
@@ -121,6 +129,52 @@ for r in rows:
         if g in grupos and tipo == "Operacional": prev_g[(emp_fluxo[e], grupos[g], m)] += -v
         if lid: prev_d[(emp_fluxo[e], lid, m)] += v
 wb.close()
+
+# ---------- PREVISTO DO SISTEMA (relatório de previstos) para os meses definidos em config ----------
+MESES_PT = {"janeiro":1,"fevereiro":2,"março":3,"marco":3,"abril":4,"maio":5,"junho":6,"julho":7,"agosto":8,
+            "setembro":9,"outubro":10,"novembro":11,"dezembro":12}
+f_prev, meses_sist = None, []
+ps = cfg.get("previsto_sistema") or {}
+if ps.get("meses"):
+    print("Procurando o relatório de previstos do sistema mais recente...")
+    try:
+        f_prev, wbp = abrir_mais_recente(ps["pasta"], ps["padrao"], ps["aba"])
+    except SystemExit as e:
+        print(f"  AVISO: {e} -> meses {ps['meses']} continuam com o previsto do fluxo de caixa")
+    if f_prev:
+        print(f"  Previsto do sistema <- {f_prev.name}  (meses {', '.join(ps['meses'])})")
+        rp = wbp[ps["aba"]].iter_rows(values_only=True)
+        cabp = [txt(c) for c in next(rp)]
+        colm = {}
+        for i, h in enumerate(cabp):
+            mm = re.match(r"([A-Za-zçÇ]+)\s*/\s*(\d{4})", h)
+            if mm and mm.group(1).lower() in MESES_PT:
+                k = f"{mm.group(2)}-{MESES_PT[mm.group(1).lower()]:02d}"
+                if k in ps["meses"] and k not in colm: colm[k] = i
+        meses_sist = sorted(colm)
+        faltam = [m for m in ps["meses"] if m not in colm]
+        if faltam: print(f"  AVISO: o relatório não tem os meses {faltam} -> ficam com o previsto do fluxo")
+        iE, iG = cabp.index(ps.get("coluna_empresa", "Empresa")), cabp.index(ps.get("coluna_grupo", "Grupo Fechamento"))
+        # zera o previsto do fluxo nesses meses para os empreendimentos do painel e põe o do sistema
+        for dic in (prev_g, prev_d):
+            for k in [k for k in dic if k[2] in colm]: del dic[k]
+        n = 0
+        for r in rp:
+            if len(r) <= iG or not r[iE]: continue
+            e = re.sub(r"^\s*\d+\s*-\s*", "", txt(r[iE]))          # "8 - CAROZZO WELLNESS ..." -> nome do Sienge
+            if e not in emp_sienge: continue
+            g = txt(r[iG])
+            cont = tipo_grupo.get(g)
+            tipo = max(cont, key=cont.get) if cont else "Operacional"
+            lid = linha_de(g, tipo)
+            for m, i in colm.items():
+                v = num(r[i])
+                if not v: continue
+                n += 1
+                if g in grupos and tipo == "Operacional": prev_g[(emp_sienge[e], grupos[g], m)] += -v
+                if lid: prev_d[(emp_sienge[e], lid, m)] += v
+        wbp.close()
+        print(f"  {n} valores do sistema aplicados")
 
 # ---------- REALIZADO: BASE TEMPLATE BUDGET mais recente ----------
 print("Procurando a BASE TEMPLATE BUDGET mais recente...")
@@ -171,7 +225,8 @@ dre = [{"empreendimento": e, "linha": l["id"], "mes": m, "previsto": round(prev_
        for e in emp_fluxo.values() for l in linhas_dre for m in meses]
 base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "data_atualizacao": hoje.isoformat(), "corte": corte.isoformat(), "mes_atual": mes_corte,
-        "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name},
+        "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name,
+                   "previsto_sistema": f_prev.name if f_prev else None, "meses_sistema": meses_sist},
         "empreendimentos": list(emp_fluxo.values()), "grupos": list(grupos.values()),
         "serie": serie, "lancamentos": sorted(lanc, key=lambda x: x["data"], reverse=True)}
 so_base = lambda lista: [x for x in lista if x["grupo"] in nomes_base]
