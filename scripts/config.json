@@ -55,5 +55,225 @@
       "empresa_fluxo": "TERRAZZA FEIRA SPE LTDA",
       "empresa_sienge": "TERRAZZA FEIRA SPE LTDA"
     }
-  ]
+  ],
+  "anos": [
+    2026,
+    2027
+  ],
+  "dre": [
+    {
+      "id": "receita",
+      "nome": "Receita Bruta",
+      "tipo": "Operacional",
+      "grupos": [
+        "1. OPERACIONAIS",
+        "5. OUTRAS RECEITAS"
+      ]
+    },
+    {
+      "id": "impostos",
+      "nome": "(-) Impostos",
+      "tipo": "Operacional",
+      "grupos": [
+        "9. DESPESAS TRIBUTÁRIAS"
+      ]
+    },
+    {
+      "id": "receita_liq",
+      "nome": "Receita Líquida",
+      "soma": [
+        "receita",
+        "impostos"
+      ]
+    },
+    {
+      "id": "terreno",
+      "nome": "1. Terreno",
+      "tipo": "Operacional",
+      "grupos": [
+        "1. TERRENO"
+      ],
+      "pai": "cuv"
+    },
+    {
+      "id": "obra",
+      "nome": "2. Custo de obra",
+      "tipo": "Operacional",
+      "grupos": [
+        "2. CUSTO DE OBRA"
+      ],
+      "pai": "cuv"
+    },
+    {
+      "id": "txadm",
+      "nome": "3. Tx administração obra",
+      "tipo": "Operacional",
+      "grupos": [
+        "3. TX ADMINISTRAÇÃO OBRA"
+      ],
+      "pai": "cuv"
+    },
+    {
+      "id": "legais",
+      "nome": "4. Despesas legais",
+      "tipo": "Operacional",
+      "grupos": [
+        "4. DESPESAS LEGAIS"
+      ],
+      "pai": "cuv"
+    },
+    {
+      "id": "projetos",
+      "nome": "5. Projetos",
+      "tipo": "Operacional",
+      "grupos": [
+        "5. PROJETOS"
+      ],
+      "pai": "cuv"
+    },
+    {
+      "id": "iptu",
+      "nome": "6. IPTU e taxas terreno",
+      "tipo": "Operacional",
+      "grupos": [
+        "6. IPTU E TAXAS TERRENO"
+      ],
+      "pai": "cuv"
+    },
+    {
+      "id": "cuv",
+      "nome": "(-) CUV",
+      "soma": [
+        "terreno",
+        "obra",
+        "txadm",
+        "legais",
+        "projetos",
+        "iptu"
+      ],
+      "antes": "terreno"
+    },
+    {
+      "id": "lucro_bruto",
+      "nome": "Lucro Bruto",
+      "soma": [
+        "receita_liq",
+        "cuv"
+      ]
+    },
+    {
+      "id": "txinc",
+      "nome": "7. Taxa de incorporação",
+      "tipo": "Operacional",
+      "grupos": [
+        "7. TAXA DE INCORPORAÇÃO"
+      ],
+      "pai": "despop"
+    },
+    {
+      "id": "mkt",
+      "nome": "8. Marketing (produto)",
+      "tipo": "Operacional",
+      "grupos": [
+        "8. MARKETING (PRODUTO)"
+      ],
+      "pai": "despop"
+    },
+    {
+      "id": "stand",
+      "nome": "8.1. Stand de vendas",
+      "tipo": "Operacional",
+      "grupos": [
+        "8.1. STAND DE VENDAS"
+      ],
+      "pai": "despop"
+    },
+    {
+      "id": "adv",
+      "nome": "10. Adv e contador",
+      "tipo": "Operacional",
+      "grupos": [
+        "10. ADV E CONTADOR"
+      ],
+      "pai": "despop"
+    },
+    {
+      "id": "consult",
+      "nome": "11. Consultorias",
+      "tipo": "Operacional",
+      "grupos": [
+        "11. CONSULTORIAS"
+      ],
+      "pai": "despop"
+    },
+    {
+      "id": "outras",
+      "nome": "12. Outras despesas operacionais",
+      "tipo": "Operacional",
+      "grupos": [
+        "12. OUTRAS DESPESAS OPERACIONAIS"
+      ],
+      "pai": "despop"
+    },
+    {
+      "id": "csc",
+      "nome": "13. CSC",
+      "tipo": "Operacional",
+      "grupos": [
+        "13. CSC"
+      ],
+      "pai": "despop"
+    },
+    {
+      "id": "despop",
+      "nome": "(-) Despesas Operacionais",
+      "soma": [
+        "txinc",
+        "mkt",
+        "stand",
+        "adv",
+        "consult",
+        "outras",
+        "csc"
+      ],
+      "antes": "txinc"
+    },
+    {
+      "id": "ebitda",
+      "nome": "EBITDA",
+      "soma": [
+        "lucro_bruto",
+        "despop"
+      ]
+    },
+    {
+      "id": "incc",
+      "nome": "INCC",
+      "tipo": "Operacional",
+      "grupos": []
+    },
+    {
+      "id": "financ",
+      "nome": "Ativ. Financiamento",
+      "tipo": "Financiamento",
+      "grupos": "*"
+    },
+    {
+      "id": "lucro_liq",
+      "nome": "Lucro Líquido",
+      "soma": [
+        "ebitda",
+        "incc",
+        "financ"
+      ]
+    }
+  ],
+  "servico_local": {
+    "porta": 8732,
+    "origens": [
+      "https://rafaelatrigo.github.io"
+    ],
+    "intervalo_segundos": 60,
+    "estabilizar_segundos": 60
+  }
 }

@@ -1,9 +1,0 @@
-*.xlsx
-*.xlsm
-~$*
-__pycache__/
-.DS_Store
-scripts/senha.txt
-site/data/marketing.json
-scripts/caminho_fluxo.txt
-atualizacao.log

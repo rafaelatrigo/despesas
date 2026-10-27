@@ -3,7 +3,9 @@
 ~$*
 __pycache__/
 .DS_Store
-scripts/senha.txt
-site/data/marketing.json
+scripts/senha*.txt
+scripts/.assinatura
 scripts/caminho_fluxo.txt
+site/data/marketing.json
 atualizacao.log
+servico.log

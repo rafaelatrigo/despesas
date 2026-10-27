@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-rem Versao para o Agendador de Tarefas: sem pausas, grava log em atualizacao.log
+rem Versao para o Agendador de Tarefas: sem pausas, so publica se a BASE TEMPLATE ou o fluxo mudaram. Log em atualizacao.log
 echo ==== %date% %time% ==== >> atualizacao.log
-python scripts\gerar_dados.py >> atualizacao.log 2>&1
+python scripts\gerar_dados.py --se-mudou >> atualizacao.log 2>&1
 if errorlevel 1 (echo ERRO ao gerar os dados >> atualizacao.log & exit /b 1)
 git pull --quiet origin main >> atualizacao.log 2>&1
 git add -A

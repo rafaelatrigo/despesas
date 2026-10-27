@@ -1,22 +1,23 @@
 """
-Gera os dados do painel Marketing e Stand (site/data/marketing.enc.json).
+Gera os dados do painel "Acompanhamento de despesas" (pasta site/data).
 
 De onde vem cada número:
-- PREVISTO: o Fluxo de Caixa modificado por último na pasta "pasta_fluxo" (config.json),
-  aba Base, linhas "Orçado" do tipo Operacional, por empresa, grupo fechamento e mês.
-- REALIZADO e LANÇAMENTOS: a BASE TEMPLATE BUDGET modificada por último na pasta
-  "pasta_budget" (config.json), aba Realizado, com Considera = S, conciliado S e N,
-  somando VALOR_V3 por DATA CAIXA.
+- PREVISTO: o Fluxo de Caixa modificado por último em "pasta_fluxo" (config.json), aba Base,
+  todas as linhas (como as fórmulas SOMASES das abas DFC), por empresa, grupo fechamento, tipo (Operacional/Financiamento) e mês
+  (anos definidos em "anos" no config, por exemplo 2026 e 2027).
+- REALIZADO e LANÇAMENTOS: a BASE TEMPLATE BUDGET modificada por último em "pasta_budget",
+  aba Realizado, com Considera = S, conciliado S e N, somando VALOR_V3 por DATA CAIXA.
   - Meses anteriores ao mês do corte: mês fechado, soma o mês inteiro.
   - Mês do corte: do dia 1 até o corte.
   - Títulos com data depois do corte aparecem como "Programado" e ficam fora do realizado.
-- CORTE: a sexta-feira anterior ao dia em que o script roda.
-  Para testar outra data:  python gerar_dados.py --data AAAA-MM-DD
+- CORTE: a sexta-feira anterior ao dia em que o script roda (teste: --data AAAA-MM-DD).
 
-Os dados são gravados CRIPTOGRAFADOS (AES-256-GCM, chave PBKDF2-SHA256).
-A senha vem de scripts/senha.txt (não vai para o Git) ou é pedida na tela.
+Dois acessos, cada um com a sua senha e o seu arquivo criptografado:
+- Líderes  (scripts/senha.txt)          -> site/data/lideres.enc.json   : os grupos de "grupos"
+- Completo (scripts/senha_completo.txt) -> site/data/completo.enc.json  : os grupos + a DRE inteira
+Opções:  --se-mudou   só gera se a BASE TEMPLATE, o fluxo ou o corte mudaram (para o agendador)
 """
-import json, sys, datetime, pathlib, os, base64, getpass, fnmatch
+import json, sys, datetime, pathlib, os, base64, getpass, fnmatch, hashlib
 from collections import defaultdict
 try:
     import openpyxl
@@ -47,128 +48,162 @@ def num(v):
 
 def txt(v): return str(v).strip() if v is not None else ""
 
-def mais_recente(pasta, padrao, aba):
-    """Arquivo modificado por último na pasta que bate com o padrão e tem a aba exigida."""
+def candidatos(pasta, padrao):
     p = pathlib.Path(pasta)
     if not p.is_dir(): sys.exit(f"Pasta não encontrada: {pasta}\nConfira scripts/config.json")
-    cands = [f for f in p.iterdir() if f.is_file() and not f.name.startswith("~$")
-             and fnmatch.fnmatch(f.name.lower(), padrao.lower())]
-    if not cands: sys.exit(f"Nenhum arquivo '{padrao}' em {pasta}")
-    for f in sorted(cands, key=lambda f: f.stat().st_mtime, reverse=True):
-        try:
-            wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
+    c = [f for f in p.iterdir() if f.is_file() and not f.name.startswith("~$")
+         and fnmatch.fnmatch(f.name.lower(), padrao.lower())]
+    if not c: sys.exit(f"Nenhum arquivo '{padrao}' em {pasta}")
+    return sorted(c, key=lambda f: f.stat().st_mtime, reverse=True)
+
+def abrir_mais_recente(pasta, padrao, aba):
+    for f in candidatos(pasta, padrao):
+        try: wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
         except Exception as e:
             print(f"  (ignorado {f.name}: não abriu - {e})"); continue
-        if aba in wb.sheetnames:
-            return f, wb
+        if aba in wb.sheetnames: return f, wb
         wb.close(); print(f"  (ignorado {f.name}: não tem a aba '{aba}')")
     sys.exit(f"Nenhum arquivo em {pasta} tem a aba '{aba}'")
 
-# ---------- data de corte ----------
+# ---------- corte ----------
 hoje = datetime.date.today()
-if "--data" in sys.argv:
-    hoje = datetime.date.fromisoformat(sys.argv[sys.argv.index("--data") + 1])
+if "--data" in sys.argv: hoje = datetime.date.fromisoformat(sys.argv[sys.argv.index("--data") + 1])
 corte = hoje - datetime.timedelta(days=(hoje.weekday() - 4) % 7 or 7)   # sexta anterior
 mes_corte = f"{corte:%Y-%m}"
-ano = corte.year
+anos = set(cfg.get("anos", [corte.year]))
+
+# ---------- só roda se algo mudou (modo agendado) ----------
+assinatura_arq = AQUI / ".assinatura"
+if "--se-mudou" in sys.argv:
+    f1 = candidatos(cfg["pasta_fluxo"], cfg["padrao_fluxo"])[0]
+    f2 = candidatos(cfg["pasta_budget"], cfg["padrao_budget"])[0]
+    assin = hashlib.sha256(json.dumps([f1.name, f1.stat().st_mtime, f2.name, f2.stat().st_mtime, corte.isoformat(),
+                                       arq_cfg.read_text(encoding="utf-8-sig")]).encode()).hexdigest()
+    if assinatura_arq.exists() and assinatura_arq.read_text().strip() == assin:
+        print(f"Sem alterações nas bases desde a última publicação ({f1.name} / {f2.name}). Nada a fazer.")
+        sys.exit(0)
 
 grupos = {g["grupo_fechamento"]: g["nome"] for g in cfg["grupos"]}
 emp_fluxo = {e["empresa_fluxo"]: e["nome"] for e in cfg["empreendimentos"]}
 emp_sienge = {e["empresa_sienge"]: e["nome"] for e in cfg["empreendimentos"]}
+linhas_dre = [l for l in cfg["dre"] if "soma" not in l]
+def linha_de(grupo, tipo):
+    for l in linhas_dre:
+        if l["tipo"] == tipo and (l["grupos"] == "*" or grupo in l["grupos"]): return l["id"]
+    return None
 
 # ---------- PREVISTO: fluxo de caixa mais recente ----------
 print("Procurando o fluxo de caixa mais recente...")
-f_fluxo, wb = mais_recente(cfg["pasta_fluxo"], cfg["padrao_fluxo"], cfg["aba_fluxo"])
+f_fluxo, wb = abrir_mais_recente(cfg["pasta_fluxo"], cfg["padrao_fluxo"], cfg["aba_fluxo"])
 print(f"  Previsto  <- {f_fluxo.name}  (modificado em {datetime.datetime.fromtimestamp(f_fluxo.stat().st_mtime):%d/%m/%Y %H:%M})")
-linhas = wb[cfg["aba_fluxo"]].iter_rows(values_only=True)
-cab = list(next(linhas))
-mes_cols = {f"{d:%Y-%m}": i for i, h in enumerate(cab) if (d := como_data(h)) and d.year == ano}
+rows = wb[cfg["aba_fluxo"]].iter_rows(values_only=True)
+cab = list(next(rows))
+mes_cols = {f"{d:%Y-%m}": i for i, h in enumerate(cab) if (d := como_data(h)) and d.year in anos}
 bix = {txt(h): i for i, h in enumerate(cab) if isinstance(h, str)}
 for c in ("Nome empresa", "Tipo análise", "Tipo", "GRUPO FECHAMENTO"):
     if c not in bix: sys.exit(f"Coluna '{c}' não encontrada na aba {cfg['aba_fluxo']} de {f_fluxo.name}")
 bC, bB, bJ, bL = bix["Nome empresa"], bix["Tipo análise"], bix["Tipo"], bix["GRUPO FECHAMENTO"]
-prev = defaultdict(float)
-for r in linhas:
-    e, g = txt(r[bC]), txt(r[bL])
-    if e not in emp_fluxo or g not in grupos or txt(r[bJ]) != "Operacional" or txt(r[bB]) != "Orçado": continue
+prev_g = defaultdict(float)     # (emp, grupo_nome, mes) -> gasto positivo
+prev_d = defaultdict(float)     # (emp, linha_dre, mes) -> valor com sinal (entrada +, saída -)
+for r in rows:
+    e, g, tipo = txt(r[bC]), txt(r[bL]), txt(r[bJ])
+    if e not in emp_fluxo: continue   # todas as linhas da Base, como as fórmulas das abas DFC
+    lid = linha_de(g, tipo)
     for m, i in mes_cols.items():
         v = num(r[i])
-        if v: prev[(emp_fluxo[e], grupos[g], m)] += -v
+        if not v: continue
+        if g in grupos and tipo == "Operacional": prev_g[(emp_fluxo[e], grupos[g], m)] += -v
+        if lid: prev_d[(emp_fluxo[e], lid, m)] += v
 wb.close()
 
 # ---------- REALIZADO: BASE TEMPLATE BUDGET mais recente ----------
 print("Procurando a BASE TEMPLATE BUDGET mais recente...")
-f_budget, wb = mais_recente(cfg["pasta_budget"], cfg["padrao_budget"], cfg["aba_budget"])
+f_budget, wb = abrir_mais_recente(cfg["pasta_budget"], cfg["padrao_budget"], cfg["aba_budget"])
 print(f"  Realizado <- {f_budget.name}  (modificado em {datetime.datetime.fromtimestamp(f_budget.stat().st_mtime):%d/%m/%Y %H:%M})")
 print("  lendo a aba Realizado (pode levar 1-2 minutos)...")
-linhas = wb[cfg["aba_budget"]].iter_rows(values_only=True)
-cab = [txt(c) for c in next(linhas)]
+rows = wb[cfg["aba_budget"]].iter_rows(values_only=True)
+cab = [txt(c) for c in next(rows)]
 ix = {n: i for i, n in enumerate(cab) if n}
 def col(n):
     if n not in ix: sys.exit(f"Coluna '{n}' não encontrada na aba {cfg['aba_budget']} de {f_budget.name}")
     return ix[n]
-cI, cL, cAG, cAJ, cAP = col("DATA CAIXA"), col("NOME DA EMPRESA"), col("CONSIDERA"), col("VALOR_V3"), col("GRUPO FECHAMENTO")
+cI, cL, cAG, cAJ, cAP, cAM = (col("DATA CAIXA"), col("NOME DA EMPRESA"), col("CONSIDERA"), col("VALOR_V3"),
+                              col("GRUPO FECHAMENTO"), col("TIPO FINANCEIRO"))
 cH, cR, cX, cO, cP = col("CONCILIADO"), col("NOME_CREDOR"), col("CONTA DO PLANO FINANCEIRO"), col("TITULO"), col("PARCELA")
-real = defaultdict(float); lanc = []; n_lidas = 0
-for r in linhas:
+real_g, real_d = defaultdict(float), defaultdict(float)
+lanc = []; n_lidas = 0; maxc = max(cI, cL, cAG, cAJ, cAP, cAM, cH, cR, cX, cO, cP)
+for r in rows:
     n_lidas += 1
-    if len(r) <= max(cI, cL, cAG, cAJ, cAP): continue
-    e, g = txt(r[cL]), txt(r[cAP])
-    if e not in emp_sienge or g not in grupos or txt(r[cAG]) != "S": continue
+    if len(r) <= maxc: r = tuple(r) + (None,) * (maxc + 1 - len(r))
+    e = txt(r[cL])
+    if e not in emp_sienge or txt(r[cAG]) != "S": continue
     d = como_data(r[cI])
-    if not d or d.year != ano: continue
-    gasto = -num(r[cAJ]); m = f"{d:%Y-%m}"
-    if d <= corte: real[(emp_sienge[e], grupos[g], m)] += gasto
-    if m >= mes_corte:
+    if not d or d.year not in anos: continue
+    g, tipo, valor, m, en = txt(r[cAP]), txt(r[cAM]), num(r[cAJ]), f"{d:%Y-%m}", emp_sienge[e]
+    if d <= corte:
+        if g in grupos: real_g[(en, grupos[g], m)] += -valor
+        if tipo == "Financiamento": real_d[(en, "financ", m)] += valor
+        else:
+            lid = linha_de(g, "Operacional")
+            if lid: real_d[(en, lid, m)] += valor
+    if g in grupos and m >= mes_corte:
         situ = "Programado" if d > corte else ("Conciliado" if txt(r[cH]) == "S" else "Não conciliado")
-        lanc.append({"data": d.isoformat(), "empreendimento": emp_sienge[e], "grupo": grupos[g],
-                     "credor": txt(r[cR]), "conta": txt(r[cX]),
-                     "titulo": f"{txt(r[cO])}/{txt(r[cP])}".strip("/"),
-                     "valor": round(gasto, 2), "situacao": situ})
+        lanc.append({"data": d.isoformat(), "empreendimento": en, "grupo": grupos[g], "credor": txt(r[cR]),
+                     "conta": txt(r[cX]), "titulo": f"{txt(r[cO])}/{txt(r[cP])}".strip("/"),
+                     "valor": round(-valor, 2), "situacao": situ})
 wb.close()
 print(f"  {n_lidas} linhas lidas")
 
-# ---------- série mensal ----------
+# ---------- séries ----------
 meses = sorted(mes_cols)
-serie = []
-for e in emp_fluxo.values():
-    for g in grupos.values():
-        for m in meses:
-            k = (e, g, m)
-            if m < mes_corte:   st = "fechado"
-            elif m == mes_corte: st = "em andamento"
-            else:               st = "previsto"
-            serie.append({"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev[k], 2),
-                          "realizado": None if st == "previsto" else round(real[k], 2), "status": st})
-
-saida = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
-         "data_atualizacao": hoje.isoformat(), "corte": corte.isoformat(), "mes_atual": mes_corte,
-         "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name},
-         "empreendimentos": list(emp_fluxo.values()), "grupos": list(grupos.values()),
-         "serie": serie, "lancamentos": sorted(lanc, key=lambda x: x["data"], reverse=True)}
+def status(m): return "fechado" if m < mes_corte else ("em andamento" if m == mes_corte else "previsto")
+serie = [{"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev_g[(e, g, m)], 2),
+          "realizado": None if status(m) == "previsto" else round(real_g[(e, g, m)], 2), "status": status(m)}
+         for e in emp_fluxo.values() for g in grupos.values() for m in meses]
+dre = [{"empreendimento": e, "linha": l["id"], "mes": m, "previsto": round(prev_d[(e, l["id"], m)], 2),
+        "realizado": None if status(m) == "previsto" else round(real_d[(e, l["id"], m)], 2), "status": status(m)}
+       for e in emp_fluxo.values() for l in linhas_dre for m in meses]
+base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
+        "data_atualizacao": hoje.isoformat(), "corte": corte.isoformat(), "mes_atual": mes_corte,
+        "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name},
+        "empreendimentos": list(emp_fluxo.values()), "grupos": list(grupos.values()),
+        "serie": serie, "lancamentos": sorted(lanc, key=lambda x: x["data"], reverse=True)}
+pacotes = {"lideres": dict(base, perfil="lideres"),
+           "completo": dict(base, perfil="completo", dre=dre,
+                            dre_estrutura=[{k: v for k, v in l.items() if k in ("id", "nome", "soma", "pai", "antes")} for l in cfg["dre"]])}
 
 # ---------- criptografia ----------
-arq_senha = AQUI / "senha.txt"
-senha = arq_senha.read_text(encoding="utf-8-sig").strip() if arq_senha.exists() else ""
-if not senha:
-    senha = getpass.getpass("Senha do painel (não aparece ao digitar): ").strip()
-if len(senha) < 12:
-    sys.exit("Use uma senha com pelo menos 12 caracteres.")
-ITER = 600_000
-salt, iv = os.urandom(16), os.urandom(12)
-chave = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITER).derive(senha.encode("utf-8"))
-ct = AESGCM(chave).encrypt(iv, json.dumps(saida, ensure_ascii=False).encode("utf-8"), None)
+def ler_senha(nome, rotulo, obrigatoria):
+    a = AQUI / nome
+    s = a.read_text(encoding="utf-8-sig").strip() if a.exists() else ""
+    if not s and obrigatoria: s = getpass.getpass(f"Senha de acesso {rotulo} (não aparece ao digitar): ").strip()
+    if s and len(s) < 12: sys.exit(f"A senha em {nome} precisa ter pelo menos 12 caracteres.")
+    return s
+senhas = {"lideres": ler_senha("senha.txt", "dos líderes", True),
+          "completo": ler_senha("senha_completo.txt", "completo (Michelle)", False)}
+if senhas["completo"] and senhas["completo"] == senhas["lideres"]:
+    sys.exit("A senha do acesso completo precisa ser diferente da senha dos líderes.")
+pasta_dados = RAIZ / "site" / "data"; pasta_dados.mkdir(parents=True, exist_ok=True)
 b64 = lambda b: base64.b64encode(b).decode("ascii")
-destino = RAIZ / "site" / "data" / "marketing.enc.json"
-destino.parent.mkdir(parents=True, exist_ok=True)
-destino.write_text(json.dumps({"v": 1, "kdf": "PBKDF2-SHA256", "iter": ITER, "salt": b64(salt),
-                               "iv": b64(iv), "dados": b64(ct)}), encoding="utf-8")
-aberto = RAIZ / "site" / "data" / "marketing.json"
-if aberto.exists(): aberto.unlink()   # nunca publicar a versão sem criptografia
+ITER = 600_000
+for perfil, dados in pacotes.items():
+    destino = pasta_dados / f"{perfil}.enc.json"
+    if not senhas[perfil]:
+        if destino.exists(): destino.unlink()
+        print(f"  (acesso {perfil}: sem senha em scripts/senha_completo.txt - não gerado)"); continue
+    salt, iv = os.urandom(16), os.urandom(12)
+    chave = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITER).derive(senhas[perfil].encode("utf-8"))
+    ct = AESGCM(chave).encrypt(iv, json.dumps(dados, ensure_ascii=False).encode("utf-8"), None)
+    destino.write_text(json.dumps({"v": 1, "kdf": "PBKDF2-SHA256", "iter": ITER, "salt": b64(salt),
+                                   "iv": b64(iv), "dados": b64(ct)}), encoding="utf-8")
+for antigo in ("marketing.enc.json", "marketing.json"):   # formatos antigos / sem criptografia
+    if (pasta_dados / antigo).exists(): (pasta_dados / antigo).unlink()
+json.dump({"gerado_em": base["gerado_em"]}, open(pasta_dados / "versao.json", "w"))
+if "--se-mudou" in sys.argv: assinatura_arq.write_text(assin)
 
 print(f"\nCorte: {corte:%d/%m/%Y} (sexta anterior a {hoje:%d/%m/%Y})")
 print(f"Mês em andamento {corte:%m/%Y} (R$ mil, gasto positivo):")
 for s in serie:
-    if s["mes"] == mes_corte:
-        print(f"  {s['empreendimento']:<26}{s['grupo']:<25} previsto {s['previsto']/1000:8.1f}   realizado {s['realizado']/1000:8.1f}")
-print(f"\nOK: {destino}  ({len(lanc)} lançamentos)")
+    if s["mes"] == mes_corte and (abs(s["previsto"]) + abs(s["realizado"])) > 0.5:
+        print(f"  {s['empreendimento']:<26}{s['grupo']:<25} previsto {s['previsto']/1000:9.1f}   realizado {s['realizado']/1000:9.1f}")
+print(f"\nOK: dados gerados em {pasta_dados}  ({len(lanc)} lançamentos)")
