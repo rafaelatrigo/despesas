@@ -340,7 +340,7 @@ function renderTiles(){
   const m=D.mes_atual, y=m.slice(0,4), prox=[...new Set(D.serie.map(s=>s.mes))].filter(x=>x>m).sort()[0];
   const prev=soma(s=>s.mes===m,"previsto"), real=soma(s=>s.mes===m,"realizado"), saldo=prev-real, pct=prev?real/prev:null;
   const ano=soma(s=>s.mes.startsWith(y)&&s.status!=="previsto","realizado");
-  const pProx=prox?soma(s=>s.mes===prox,"previsto"):0;
+  const pProx=prox?soma(s=>s.mes===prox,"previsto"):0, prevAno=soma(s=>s.mes.startsWith(y),"previsto");
   const prog=D.lancamentos.filter(l=>l.situacao==="Programado"&&okE(l.empreendimento)&&okG(l.grupo));
   const progMes=prog.filter(l=>l.data.slice(0,7)===m).reduce((a,l)=>a+l.valor,0), progTot=prog.reduce((a,l)=>a+l.valor,0);
 const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
@@ -352,8 +352,8 @@ const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
      <div class="meter" aria-hidden="true"><i style="width:${Math.min(100,(pct||0)*100)}%"></i></div></div>
    <div class="tile" title="Previsto − realizado no mês"><div class="k">${saldo<0?"Acima do previsto":"Saldo a realizar"}</div><div class="v ${saldo<0?"neg":""}">${V(Math.abs(saldo))}</div><div class="s">previsto − realizado</div></div>
    <div class="tile" title="Títulos com data caixa depois do corte${progTot!==progMes?` · total com meses seguintes: R$ ${fmtMil(progTot)} mil`:""}"><div class="k">Programado após ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(progMes)}</div><div class="s">${nProg} títulos no mês</div></div>
-   <div class="tile" title="Previsto no fluxo de caixa para ${prox?mesNome(prox):""}"><div class="k">Previsto ${prox?mc(prox):"—"}</div><div class="v">${V(pProx)}</div><div class="s">próximo mês</div></div>
-   <div class="tile" title="Meses fechados + mês em andamento"><div class="k">Realizado ${y}</div><div class="v">${V(ano)}</div><div class="s">acumulado no ano</div></div>`;
+   <div class="tile" title="Soma do previsto no fluxo de caixa para todos os meses de ${y} (meses fechados pelo valor do fluxo + meses em aberto pelo orçado)"><div class="k">Previsto ${y}</div><div class="v">${V(prevAno)}</div><div class="s">fluxo de caixa · ano inteiro</div></div>
+   <div class="tile" title="Meses fechados + mês em andamento"><div class="k">Realizado ${y}</div><div class="v">${V(ano)}</div><div class="s">${prevAno?(ano/prevAno*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"% do previsto do ano":"acumulado no ano"}</div></div>`;
 }
 
 /* ---------- gráfico (ligado à tabela de lançamentos) ---------- */
