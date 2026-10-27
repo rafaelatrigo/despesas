@@ -150,7 +150,7 @@ for r in rows:
         else:
             lid = linha_de(g, "Operacional")
             if lid: real_d[(en, lid, m)] += valor
-    if g in grupos and m >= mes_corte:
+    if g in grupos:   # todos os meses dos anos do config (o painel cruza tabela x gráfico)
         situ = "Programado" if d > corte else ("Conciliado" if txt(r[cH]) == "S" else "Não conciliado")
         lanc.append({"data": d.isoformat(), "empreendimento": en, "grupo": grupos[g], "credor": txt(r[cR]),
                      "conta": txt(r[cX]), "titulo": f"{txt(r[cO])}/{txt(r[cP])}".strip("/"),
