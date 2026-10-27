@@ -56,10 +56,7 @@
       "empresa_sienge": "TERRAZZA FEIRA SPE LTDA"
     }
   ],
-  "anos": [
-    2026,
-    2027
-  ],
+  "anos": "auto",
   "dre": [
     {
       "id": "receita",

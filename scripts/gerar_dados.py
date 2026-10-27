@@ -10,7 +10,8 @@ De onde vem cada número:
   - Meses anteriores ao mês do corte: mês fechado, soma o mês inteiro.
   - Mês do corte: do dia 1 até o corte.
   - Títulos com data depois do corte aparecem como "Programado" e ficam fora do realizado.
-- CORTE: a sexta-feira anterior ao dia em que o script roda (teste: --data AAAA-MM-DD).
+- CORTE: a sexta-feira mais recente, contando o próprio dia (rodou na sexta = a própria sexta;
+  sábado a quinta = a sexta passada). Teste: --data AAAA-MM-DD
 
 Dois acessos, cada um com a sua senha e o seu arquivo criptografado:
 - Líderes  (scripts/senha.txt)          -> site/data/lideres.enc.json   : os grupos de "grupos"
@@ -68,9 +69,10 @@ def abrir_mais_recente(pasta, padrao, aba):
 # ---------- corte ----------
 hoje = datetime.date.today()
 if "--data" in sys.argv: hoje = datetime.date.fromisoformat(sys.argv[sys.argv.index("--data") + 1])
-corte = hoje - datetime.timedelta(days=(hoje.weekday() - 4) % 7 or 7)   # sexta anterior
+corte = hoje - datetime.timedelta(days=(hoje.weekday() - 4) % 7)   # sexta mais recente (inclui hoje, se for sexta)
 mes_corte = f"{corte:%Y-%m}"
-anos = set(cfg.get("anos", [corte.year]))
+_anos = cfg.get("anos", "auto")
+anos = ({corte.year - 1, corte.year, corte.year + 1} if _anos == "auto" else set(_anos))   # auto: ano anterior, atual e seguinte
 
 # ---------- só roda se algo mudou (modo agendado) ----------
 assinatura_arq = AQUI / ".assinatura"
@@ -207,7 +209,7 @@ for antigo in ("marketing.enc.json", "marketing.json"):   # formatos antigos / s
 json.dump({"gerado_em": base["gerado_em"]}, open(pasta_dados / "versao.json", "w"))
 if "--se-mudou" in sys.argv: assinatura_arq.write_text(assin)
 
-print(f"\nCorte: {corte:%d/%m/%Y} (sexta anterior a {hoje:%d/%m/%Y})")
+print(f"\nCorte: {corte:%d/%m/%Y} (sexta mais recente até {hoje:%d/%m/%Y})")
 print(f"Mês em andamento {corte:%m/%Y} (R$ mil, gasto positivo):")
 for s in serie:
     if s["mes"] == mes_corte and s["grupo"] in nomes_base and (abs(s["previsto"]) + abs(s["realizado"])) > 0.5:

@@ -315,7 +315,9 @@ function lista(id,key,opcoes,rotTodos,swatch){
 }
 function init(){
   const fix=(k,all)=>{ if(!Array.isArray(st[k])) st[k]=[...all]; st[k]=all.filter(x=>st[k].includes(x)); if(!st[k].length) st[k]=[...all]; };
-  fix("emps",D.empreendimentos); fix("grps",D.grupos); fix("anos",ANOS());
+  fix("emps",D.empreendimentos); fix("grps",D.grupos);
+  const anoAt=D.mes_atual.slice(0,4), padrao=ANOS().filter(a=>a>=anoAt);          // padrão: ano atual + seguinte
+  if(!Array.isArray(st.anos)||!st.anos.includes(anoAt)) st.anos=padrao; fix("anos",ANOS());
   $("stamp").innerHTML=`Dados de ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}<br>Realizado até ${fmtD(D.corte)}`;
   $("perfil").textContent=D.perfil==="completo"?"Acesso completo":"Acesso líderes";
   lista("fEmp","emps",D.empreendimentos,"Todos");

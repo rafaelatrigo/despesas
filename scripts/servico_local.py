@@ -92,11 +92,16 @@ def observar():
     c = cfg(); sl = c.get("servico_local", {})
     intervalo = int(sl.get("intervalo_segundos", 60)); espera = int(sl.get("estabilizar_segundos", 60))
     ultima = assinatura_pastas(c); mudou_em = None
+    corte_atual = lambda: (lambda h: h - datetime.timedelta(days=(h.weekday() - 4) % 7))(datetime.date.today())
+    ultimo_corte = corte_atual()
     log(f"Observando as pastas a cada {intervalo}s. Publicação automática {espera}s depois de salvar.")
     publicar("início do serviço", so_se_mudou=True)          # publica se algo mudou enquanto estava desligado
     while True:
         time.sleep(intervalo)
         try:
+            if corte_atual() != ultimo_corte:      # virou sexta-feira: títulos do dia passam de Programado para Realizado
+                ultimo_corte = corte_atual(); log(f"Novo corte: {ultimo_corte:%d/%m/%Y}")
+                publicar("novo corte (sexta-feira)", so_se_mudou=True)
             atual = assinatura_pastas(cfg())
             if atual != ultima:
                 ultima, mudou_em = atual, time.time()

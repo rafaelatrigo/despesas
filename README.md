@@ -19,10 +19,10 @@ O script procura sozinho, em cada pasta, o arquivo **modificado por último**:
 
 | Dado | Pasta (`scripts/config.json`) | Arquivo e aba | Regra |
 |---|---|---|---|
-| **Previsto** (2026 e 2027, mês a mês) | `CONTROLADORIA\FLUXO DE CAIXA CONSOLIDADO` | fluxo de caixa mais recente, aba **Base** | Todas as linhas, como as fórmulas SOMASES das abas DFC, por empresa, grupo fechamento, tipo e mês |
+| **Previsto** (mês a mês: ano anterior, atual e seguinte, automático) | `CONTROLADORIA\FLUXO DE CAIXA CONSOLIDADO` | fluxo de caixa mais recente, aba **Base** | Todas as linhas, como as fórmulas SOMASES das abas DFC, por empresa, grupo fechamento, tipo e mês |
 | **Realizado** e **lançamentos** | `CONTROLADORIA\DESPESAS` | BASE TEMPLATE BUDGET mais recente, aba **Realizado** | Considera = S, conciliado S e N, VALOR_V3 por DATA CAIXA |
 
-- **Corte:** sexta-feira anterior ao dia em que o script roda.
+- **Corte:** a sexta-feira mais recente, contando o próprio dia. Se roda na sexta, o corte é a própria sexta; de sábado a quinta, é a sexta passada. Assim, a apresentação de segunda mostra tudo o que foi pago até sexta. O "mês vigente" é o mês do corte, e o "próximo mês" é o seguinte. A troca acontece sozinha na primeira sexta-feira do mês novo. Os anos também viram sozinhos (`"anos": "auto"` no config).
 - **Meses:**
   - meses anteriores ao corte são fechados;
   - o mês do corte soma do dia 1 até o corte;
