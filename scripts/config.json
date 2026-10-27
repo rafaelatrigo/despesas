@@ -306,5 +306,22 @@
     "coluna_empresa": "Empresa",
     "coluna_grupo": "Grupo Fechamento",
     "meses": []
-  }
+  },
+  "titulos_liquidos": [
+    {
+      "empresa": "TERRAZZA BALENA SPE LTDA",
+      "titulo": "30376",
+      "obs": "Considerar só o líquido (R$ 70.845,80): pagamento de terreno menos o desconto do título"
+    },
+    {
+      "empresa": "TERRAZZA FEIRA SPE LTDA",
+      "titulo": "30705",
+      "obs": "Considerar só o líquido (R$ 36.637,74): pagamento de terreno menos o desconto do título"
+    },
+    {
+      "empresa": "TERRAZZA FEIRA SPE LTDA",
+      "titulo": "30704",
+      "obs": "Considerar só o líquido (R$ 54.956,60): pagamento de terreno menos o desconto do título"
+    }
+  ]
 }

@@ -12,6 +12,8 @@ De onde vem cada número:
   - Meses anteriores ao mês do corte: mês fechado, soma o mês inteiro.
   - Mês do corte: do dia 1 até o corte.
   - Títulos com data depois do corte aparecem como "Programado" e ficam fora do realizado.
+  - Títulos em "titulos_liquidos" (config.json) entram pelo valor líquido: pagamento menos o desconto
+    do próprio título (conta redutora), numa linha só, no grupo e na data do pagamento.
 - CORTE: a sexta-feira mais recente, contando o próprio dia (rodou na sexta = a própria sexta;
   sábado a quinta = a sexta passada). Teste: --data AAAA-MM-DD
 
@@ -190,16 +192,14 @@ def col(n):
 cI, cL, cAG, cAJ, cAP, cAM = (col("DATA CAIXA"), col("NOME DA EMPRESA"), col("CONSIDERA"), col("VALOR_V3"),
                               col("GRUPO FECHAMENTO"), col("TIPO FINANCEIRO"))
 cH, cR, cX, cO, cP = col("CONCILIADO"), col("NOME_CREDOR"), col("CONTA DO PLANO FINANCEIRO"), col("TITULO"), col("PARCELA")
+cRed = ix.get("REDUTORA")
 real_g, real_d = defaultdict(float), defaultdict(float)
-lanc = []; n_lidas = 0; maxc = max(cI, cL, cAG, cAJ, cAP, cAM, cH, cR, cX, cO, cP)
-for r in rows:
-    n_lidas += 1
-    if len(r) <= maxc: r = tuple(r) + (None,) * (maxc + 1 - len(r))
-    e = txt(r[cL])
-    if e not in emp_sienge or txt(r[cAG]) != "S": continue
-    d = como_data(r[cI])
-    if not d or d.year not in anos: continue
-    g, tipo, valor, m, en = txt(r[cAP]), txt(r[cAM]), num(r[cAJ]), f"{d:%Y-%m}", emp_sienge[e]
+# Títulos que entram pelo valor líquido (pagamento menos o desconto do próprio título), definidos em config.json
+liq = {(txt(t.get("empresa")), txt(t["titulo"])): t for t in cfg.get("titulos_liquidos", [])}
+pend = defaultdict(list)   # (empresa, título, parcela) -> linhas do título
+def lancar(r, valor, sufixo_conta=""):
+    e = txt(r[cL]); d = como_data(r[cI])
+    g, tipo, m, en = txt(r[cAP]), txt(r[cAM]), f"{d:%Y-%m}", emp_sienge[e]
     if d <= corte:
         if g in grupos: real_g[(en, grupos[g], m)] += -valor
         if tipo == "Financiamento": real_d[(en, "financ", m)] += valor
@@ -209,8 +209,27 @@ for r in rows:
     if g in grupos:   # todos os meses dos anos do config (o painel cruza tabela x gráfico)
         situ = "Programado" if d > corte else ("Conciliado" if txt(r[cH]) == "S" else "Não conciliado")
         lanc.append({"data": d.isoformat(), "empreendimento": en, "grupo": grupos[g], "credor": txt(r[cR]),
-                     "conta": txt(r[cX]), "titulo": f"{txt(r[cO])}/{txt(r[cP])}".strip("/"),
+                     "conta": txt(r[cX]) + sufixo_conta, "titulo": f"{txt(r[cO])}/{txt(r[cP])}".strip("/"),
                      "valor": round(-valor, 2), "situacao": situ})
+lanc = []; n_lidas = 0; maxc = max(cI, cL, cAG, cAJ, cAP, cAM, cH, cR, cX, cO, cP, cRed or 0)
+for r in rows:
+    n_lidas += 1
+    if len(r) <= maxc: r = tuple(r) + (None,) * (maxc + 1 - len(r))
+    e = txt(r[cL])
+    if e not in emp_sienge or txt(r[cAG]) != "S": continue
+    d = como_data(r[cI])
+    if not d or d.year not in anos: continue
+    tit = re.sub(r"\.0$", "", txt(r[cO]))
+    if (e, tit) in liq or ("", tit) in liq:
+        pend[(e, tit, txt(r[cP]))].append(r); continue
+    lancar(r, num(r[cAJ]))
+for (e, tit, parc), linhas in pend.items():
+    # o desconto (conta redutora) é abatido do pagamento: entra uma linha só, no grupo e na data do pagamento
+    principais = [r for r in linhas if cRed is None or txt(r[cRed]) != "S"] or linhas
+    princ = max(principais, key=lambda r: abs(num(r[cAJ])))
+    liquido = sum(num(r[cAJ]) for r in linhas)
+    print(f"  Título {tit}/{parc} ({e}): {-num(princ[cAJ]):,.2f} pago - descontos = {-liquido:,.2f} considerado")
+    lancar(princ, liquido, " (líquido do desconto)")
 wb.close()
 print(f"  {n_lidas} linhas lidas")
 
