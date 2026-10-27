@@ -169,7 +169,7 @@ details.fbox>summary{display:none}
       <summary>Filtros</summary>
       <div class="menu-tit">FILTROS</div>
       <span class="perfil" id="perfil"></span>
-      <p style="margin:0 0 12px;font-size:12px;color:var(--muted)">Clique para filtrar. Clique em mais de um para combinar.</p>
+      <p style="margin:0 0 12px;font-size:12px;color:var(--muted)" id="dica">Clique para filtrar. Segure <b>Ctrl</b> e clique para selecionar mais de um.</p>
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Despesas</h3><div id="fGrp"></div></div>
       <div class="fsec"><h3>Período do gráfico</h3><div id="fAno"></div></div>
@@ -296,17 +296,19 @@ const ANOS=()=>[...new Set(D.serie.map(s=>s.mes.slice(0,4)))].sort();
 const cor=g=>{const i=(D.grupos_base||D.grupos).indexOf(g); return i>=0?`var(--s${i+1})`:"var(--sx)";};
 const okE=e=>st.emps.includes(e), okG=g=>st.grps.includes(g);
 function salvar(){try{localStorage.setItem("desp-filtros",JSON.stringify(st))}catch(e){}}
+const TOQUE=window.matchMedia&&matchMedia("(pointer:coarse)").matches;   /* celular/tablet: sem Ctrl, cada toque soma */
 function lista(id,key,opcoes,rotTodos,swatch){
   const el=$(id), todos=st[key].length===opcoes.length;
   el.className="fgrid";
   el.innerHTML=`<button type="button" class="fbtn todos" aria-pressed="${todos}">${rotTodos}</button>`+
     opcoes.map(o=>`<button type="button" class="fbtn" aria-pressed="${!todos&&st[key].includes(o)}">${swatch?`<i class="sw" style="background:${swatch(o)}"></i>`:""}${esc(o)}</button>`).join("");
-  el.querySelectorAll("button").forEach((bt,i)=>bt.onclick=()=>{
+  el.querySelectorAll("button").forEach((bt,i)=>bt.onclick=ev=>{
     if(i===0) st[key]=[...opcoes];
-    else{ const o=opcoes[i-1];
-      if(st[key].length===opcoes.length) st[key]=[o];              // de "Todos" para um só
-      else if(st[key].includes(o)) st[key]=st[key].filter(x=>x!==o); // desmarca
-      else st[key]=[...st[key],o];                                   // soma à seleção
+    else{ const o=opcoes[i-1], multi=ev.ctrlKey||ev.metaKey||TOQUE;
+      if(!multi) st[key]=(st[key].length===1&&st[key][0]===o)?[...opcoes]:[o];   // clique simples: só este (clicar de novo volta para Todos)
+      else if(st[key].length===opcoes.length) st[key]=[o];                      // Ctrl a partir de "Todos"
+      else if(st[key].includes(o)) st[key]=st[key].filter(x=>x!==o);            // Ctrl: desmarca
+      else st[key]=[...st[key],o];                                              // Ctrl: soma à seleção
       if(!st[key].length) st[key]=[...opcoes];
       st[key]=opcoes.filter(x=>st[key].includes(x)); }
     salvar(); lista(id,key,opcoes,rotTodos,swatch); render();});
@@ -322,6 +324,7 @@ function init(){
   if(window.matchMedia("(max-width:900px)").matches) $("fbox").open=false;
   $("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base). Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S e N, por data caixa). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
   if(D.dre) $("tiles").after($("dreCard"));   /* acesso completo: DRE logo abaixo dos quadros */
+  if(TOQUE) $("dica").textContent="Toque para filtrar. Toque em mais de um para combinar.";
   $("q").oninput=renderLanc;
   render();
 }
@@ -356,7 +359,7 @@ function renderChart(){
   $("chTitle").textContent=`Gasto mensal · ${st.emps.length===D.empreendimentos.length?"todos os empreendimentos":st.emps.join(", ")}`;
   $("chSub").innerHTML=det
     ? `R$ mil · <b>realizado só dos lançamentos filtrados na tabela</b> (o previsto não se aplica a filtro de credor, conta, título, situação ou valor)`
-    : `R$ mil · meses fechados (cor cheia), mês em andamento até o corte e previsto (tom claro com contorno tracejado) · <b>clique numa barra</b> para ver os lançamentos do mês`;
+    : `R$ mil · meses fechados (cor cheia), mês em andamento até o corte e previsto (tom claro com contorno tracejado) · <b>clique numa barra</b> para ver os lançamentos do mês (Ctrl+clique soma meses)`;
   const base=D.grupos_base||D.grupos, extras=gs.filter(g=>!base.includes(g));
   $("legend").innerHTML=gs.filter(g=>base.includes(g)).map(g=>`<span class="lg" data-g="${esc(g)}" title="Clique para ver só ${esc(g)}"><i class="sw" style="background:${cor(g)}"></i>${esc(g)}</span>`).join("")+
     (extras.length?`<span title="${esc(extras.join(", "))}"><i class="sw" style="background:var(--sx)"></i>Demais despesas da DRE (${extras.length})</span>`:"")+
@@ -398,8 +401,9 @@ function renderChart(){
   s+=`<line x1="${mg.l}" x2="${W-mg.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--text-2)"/></svg>`;
   box.innerHTML=s; box.appendChild(tip);
   box.querySelectorAll(".hit").forEach(h=>{
-    h.addEventListener("click",()=>{const m=rows[+h.dataset.i].mes;
-      if(!XF.meses) XF.meses=new Set([m]); else if(XF.meses.has(m)){XF.meses.delete(m); if(!XF.meses.size) XF.meses=null;} else XF.meses.add(m);
+    h.addEventListener("click",ev=>{const m=rows[+h.dataset.i].mes, multi=ev.ctrlKey||ev.metaKey||TOQUE;
+      if(!multi) XF.meses=(XF.meses&&XF.meses.size===1&&XF.meses.has(m))?null:new Set([m]);
+      else if(!XF.meses) XF.meses=new Set([m]); else if(XF.meses.has(m)){XF.meses.delete(m); if(!XF.meses.size) XF.meses=null;} else XF.meses.add(m);
       tip.style.display="none"; renderChart(); renderLanc();});
     h.addEventListener("mousemove",ev=>{const o=rows[+h.dataset.i], pv=o.status==="previsto";
       const rot={fechado:"Fechado","em andamento":`Em andamento (até ${fmtD(D.corte).slice(0,5)})`,previsto:"Previsto",futuro:"Mês futuro"}[o.status]||"";
@@ -407,7 +411,7 @@ function renderChart(){
         (o.status!=="previsto"?`<div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:4px"><span>Realizado total</span><span>${fmtMil(o.real)}</span></div>`:"")+
         (o.prog?`<div class="r"><span>Programado</span><span>${fmtMil(o.prog)}</span></div>`:"")+
         (!det&&o.status!=="fechado"?`<div class="r"><span>Previsto total</span><span>${fmtMil(o.prev)}</span></div>`:"")+
-        `<div style="margin-top:6px;color:var(--muted);font-size:11px">${XF.meses&&XF.meses.has(o.mes)?"Clique para tirar este mês do filtro":"Clique para filtrar os lançamentos deste mês"}</div>`;
+        `<div style="margin-top:6px;color:var(--muted);font-size:11px">${XF.meses&&XF.meses.has(o.mes)?"Clique para tirar o filtro · Ctrl+clique para tirar só este mês":"Clique para filtrar este mês · Ctrl+clique para somar meses"}</div>`;
       tip.style.display="block"; const bx=box.getBoundingClientRect();
       let lx=ev.clientX-bx.left+14; if(lx+210>bx.width) lx=ev.clientX-bx.left-220; tip.style.left=Math.max(0,lx)+"px"; tip.style.top=(ev.clientY-bx.top-10)+"px";});
     h.addEventListener("mouseleave",()=>tip.style.display="none");});
