@@ -10,8 +10,8 @@
   color-scheme: light;
   --bg:#f3f3f0; --surface:#ffffff; --surface-2:#f0efea; --line:#dedcd5;
   --text:#1c1c1a; --text-2:#55534d; --muted:#83807a;
-  --brand:#2f5a34; --brand-2:#e6ede3; --brand-ink:#ffffff;
-  --s1:#2f5a34; --s2:#7d9b6e; --s3:#c4cfb4; --s4:#5f5b54; --s5:#948e7e; --s6:#ddd3bf; --s7:#8f6b3e; --s8:#cfa86a;
+  --brand:#04452f; --brand-2:#e3ece6; --brand-ink:#ffffff; --cobre:#9c6c4f;
+  --s1:#04452f; --s2:#6f9a7c; --s3:#c3d4c6; --s4:#5f5b54; --s5:#a8a296; --s6:#e2ddd2; --s7:#9c6c4f; --s8:#c0a163; --sx:#7c8b93;
   --good:#3f8f3f; --warn:#c99a2e; --crit:#b8473f;
   --radius:10px;
 }
@@ -20,8 +20,8 @@
     color-scheme: dark;
     --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --line:#34332f;
     --text:#f0efec; --text-2:#c6c4bb; --muted:#97958d;
-    --brand:#6fa86c; --brand-2:#223322; --brand-ink:#0f170f;
-    --s1:#4f8f4d; --s2:#97b585; --s3:#e1e8d6; --s4:#7d786e; --s5:#b8b1a0; --s6:#f0e8d6; --s7:#a8804c; --s8:#e0bf86;
+    --brand:#3f8f68; --brand-2:#1d2e25; --brand-ink:#0d1712; --cobre:#c08566;
+    --s1:#3f8f68; --s2:#8fb89a; --s3:#d9e6dc; --s4:#8a857c; --s5:#bdb7aa; --s6:#f0ebe0; --s7:#b07658; --s8:#e3c891; --sx:#9aa7ae;
     --good:#6fbf6f; --warn:#e0b84f; --crit:#e07a70;
   }
 }
@@ -29,8 +29,8 @@
   color-scheme: dark;
   --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --line:#34332f;
   --text:#f0efec; --text-2:#c6c4bb; --muted:#97958d;
-  --brand:#6fa86c; --brand-2:#223322; --brand-ink:#0f170f;
-  --s1:#4f8f4d; --s2:#97b585; --s3:#e1e8d6; --s4:#7d786e; --s5:#b8b1a0; --s6:#f0e8d6; --s7:#a8804c; --s8:#e0bf86;
+  --brand:#3f8f68; --brand-2:#1d2e25; --brand-ink:#0d1712; --cobre:#c08566;
+  --s1:#3f8f68; --s2:#8fb89a; --s3:#d9e6dc; --s4:#8a857c; --s5:#bdb7aa; --s6:#f0ebe0; --s7:#b07658; --s8:#e3c891; --sx:#9aa7ae;
   --good:#6fbf6f; --warn:#e0b84f; --crit:#e07a70;
 }
 *{box-sizing:border-box}
@@ -39,7 +39,7 @@ header{background:var(--surface);border-bottom:3px solid var(--brand)}
 .top{max-width:1360px;margin:0 auto;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;justify-content:space-between}
 .brandbox{display:flex;align-items:center;gap:14px;min-width:0}
 .logo{height:42px;width:auto;display:block}
-.logo-txt{font-weight:800;letter-spacing:.18em;color:var(--brand);font-size:18px;display:none}
+.logo-txt{font-weight:800;letter-spacing:.18em;color:var(--cobre);font-size:18px;display:none}
 h1{margin:0;font-size:20px;font-weight:650;color:var(--text)}
 .brandbox p{margin:0;color:var(--text-2);font-size:12px}
 .acoes{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -47,23 +47,28 @@ h1{margin:0;font-size:20px;font-weight:650;color:var(--text)}
 .btn{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
 .btn.prim{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 .btn:disabled{opacity:.6;cursor:wait}
-.btn:focus-visible,.chk input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.btn:focus-visible,.fbtn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .layout{max-width:1360px;margin:0 auto;padding:18px 16px 40px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
 aside{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;position:sticky;top:12px}
 aside h3{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
 .fsec{margin-bottom:16px}.fsec:last-child{margin-bottom:0}
-.chk{display:flex;align-items:center;gap:8px;padding:4px 2px;cursor:pointer;font-size:13px;border-radius:6px}
-.chk:hover{background:var(--surface-2)}
-.chk input{accent-color:var(--brand);width:15px;height:15px;margin:0}
-.chk.todos{font-weight:600;border-bottom:1px solid var(--line);margin-bottom:4px;padding-bottom:6px;border-radius:0}
+.fgrid{display:flex;flex-wrap:wrap;gap:6px}
+.fbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:5px 11px;font:inherit;font-size:12.5px;cursor:pointer;line-height:1.3;text-align:left}
+.fbtn:hover{border-color:var(--brand)}
+.fbtn[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.fbtn[aria-pressed="true"] .sw{border-color:rgba(255,255,255,.7)}
+.fbtn.todos{font-weight:600}
 .sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;border:1px solid rgba(0,0,0,.12)}
 .perfil{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--brand-2);color:var(--brand);font-weight:600;margin-bottom:12px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
-.tile .k{font-size:12px;color:var(--text-2)}
-.tile .v{font-size:clamp(18px,1.6vw,24px);font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.tile .s{font-size:12px;color:var(--muted);margin-top:2px}
-.meter{height:6px;background:var(--surface-2);border-radius:3px;margin-top:8px;overflow:hidden}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:9px 11px;min-width:0}
+.tile .k{font-size:11px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .v{font-size:clamp(15px,1.35vw,19px);font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tile .v small{font-size:11px;font-weight:500;color:var(--muted);margin-left:3px}
+.tile .s{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:1180px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.meter{height:4px;background:var(--surface-2);border-radius:3px;margin-top:5px;overflow:hidden}
 .meter i{display:block;height:100%;background:var(--brand);border-radius:3px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
 .card h2{margin:0 0 4px;font-size:16px}
@@ -144,6 +149,7 @@ details.fbox>summary{display:none}
     <details class="fbox" id="fbox" open>
       <summary>Filtros</summary>
       <span class="perfil" id="perfil"></span>
+      <p style="margin:0 0 12px;font-size:12px;color:var(--muted)">Clique para filtrar. Clique em mais de um para combinar.</p>
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Despesas</h3><div id="fGrp"></div></div>
       <div class="fsec"><h3>Período do gráfico</h3><div id="fAno"></div></div>
@@ -267,18 +273,23 @@ if(!window.crypto||!crypto.subtle) msg.textContent="Abra o painel pelo endereço
 
 /* ---------- filtros ---------- */
 const ANOS=()=>[...new Set(D.serie.map(s=>s.mes.slice(0,4)))].sort();
-const cor=g=>`var(--s${D.grupos.indexOf(g)+1})`;
+const cor=g=>{const i=(D.grupos_base||D.grupos).indexOf(g); return i>=0?`var(--s${i+1})`:"var(--sx)";};
 const okE=e=>st.emps.includes(e), okG=g=>st.grps.includes(g);
 function salvar(){try{localStorage.setItem("desp-filtros",JSON.stringify(st))}catch(e){}}
 function lista(id,key,opcoes,rotTodos,swatch){
   const el=$(id), todos=st[key].length===opcoes.length;
-  el.innerHTML=`<label class="chk todos"><input type="checkbox" ${todos?"checked":""}>${rotTodos}</label>`+
-    opcoes.map(o=>`<label class="chk"><input type="checkbox" ${st[key].includes(o)?"checked":""}>${swatch?`<i class="sw" style="background:${swatch(o)}"></i>`:""}${esc(o)}</label>`).join("");
-  const cbs=el.querySelectorAll("input");
-  cbs[0].onchange=()=>{st[key]=cbs[0].checked?[...opcoes]:[opcoes[0]]; salvar(); lista(id,key,opcoes,rotTodos,swatch); render();};
-  opcoes.forEach((o,i)=>cbs[i+1].onchange=()=>{
-    let v=opcoes.filter((x,j)=>cbs[j+1].checked); if(!v.length){v=[o]; cbs[i+1].checked=true;}
-    st[key]=v; cbs[0].checked=v.length===opcoes.length; salvar(); render();});
+  el.className="fgrid";
+  el.innerHTML=`<button type="button" class="fbtn todos" aria-pressed="${todos}">${rotTodos}</button>`+
+    opcoes.map(o=>`<button type="button" class="fbtn" aria-pressed="${!todos&&st[key].includes(o)}">${swatch?`<i class="sw" style="background:${swatch(o)}"></i>`:""}${esc(o)}</button>`).join("");
+  el.querySelectorAll("button").forEach((bt,i)=>bt.onclick=()=>{
+    if(i===0) st[key]=[...opcoes];
+    else{ const o=opcoes[i-1];
+      if(st[key].length===opcoes.length) st[key]=[o];              // de "Todos" para um só
+      else if(st[key].includes(o)) st[key]=st[key].filter(x=>x!==o); // desmarca
+      else st[key]=[...st[key],o];                                   // soma à seleção
+      if(!st[key].length) st[key]=[...opcoes];
+      st[key]=opcoes.filter(x=>st[key].includes(x)); }
+    salvar(); lista(id,key,opcoes,rotTodos,swatch); render();});
 }
 function init(){
   const fix=(k,all)=>{ if(!Array.isArray(st[k])) st[k]=[...all]; st[k]=all.filter(x=>st[k].includes(x)); if(!st[k].length) st[k]=[...all]; };
@@ -290,6 +301,7 @@ function init(){
   lista("fAno","anos",ANOS(),"Todos");
   if(window.matchMedia("(max-width:900px)").matches) $("fbox").open=false;
   $("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base). Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S e N, por data caixa). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
+  if(D.dre) $("tiles").after($("dreCard"));   /* acesso completo: DRE logo abaixo dos quadros */
   $("q").oninput=renderLanc;
   render();
 }
@@ -305,22 +317,26 @@ function renderTiles(){
   const pProx=prox?soma(s=>s.mes===prox,"previsto"):0;
   const prog=D.lancamentos.filter(l=>l.situacao==="Programado"&&okE(l.empreendimento)&&okG(l.grupo));
   const progMes=prog.filter(l=>l.data.slice(0,7)===m).reduce((a,l)=>a+l.valor,0), progTot=prog.reduce((a,l)=>a+l.valor,0);
+const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
+  const V=x=>`${fmtMil(x)}<small>R$ mil</small>`, nProg=prog.filter(l=>l.data.slice(0,7)===m).length;
   $("tiles").innerHTML=`
-   <div class="tile"><div class="k">Previsto · ${mesNome(m)}</div><div class="v">R$ ${fmtMil(prev)} mil</div><div class="s">fluxo de caixa</div></div>
-   <div class="tile"><div class="k">Realizado até ${fmtD(D.corte).slice(0,5)}</div><div class="v">R$ ${fmtMil(real)} mil</div>
-     <div class="s">${pct==null?"sem previsto no mês":(pct*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"% do previsto"}</div>
+   <div class="tile" title="Previsto no fluxo de caixa para ${mesNome(m)}"><div class="k">Previsto ${mc(m)}</div><div class="v">${V(prev)}</div><div class="s">fluxo de caixa</div></div>
+   <div class="tile" title="Realizado de 1º/${m.slice(5)} até o corte"><div class="k">Realizado até ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(real)}</div>
+     <div class="s">${pct==null?"sem previsto":(pct*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"% do previsto"}</div>
      <div class="meter" aria-hidden="true"><i style="width:${Math.min(100,(pct||0)*100)}%"></i></div></div>
-   <div class="tile"><div class="k">${saldo<0?"Acima do previsto":"Saldo a realizar"}</div><div class="v ${saldo<0?"neg":""}">R$ ${fmtMil(Math.abs(saldo))} mil</div><div class="s">previsto − realizado no mês</div></div>
-   <div class="tile"><div class="k">Programado após ${fmtD(D.corte).slice(0,5)}</div><div class="v">R$ ${fmtMil(progMes)} mil</div><div class="s">no mês · ${prog.filter(l=>l.data.slice(0,7)===m).length} títulos${progTot!==progMes?` · total R$ ${fmtMil(progTot)} mil`:""}</div></div>
-   <div class="tile"><div class="k">Previsto · ${prox?mesNome(prox):"—"}</div><div class="v">R$ ${fmtMil(pProx)} mil</div><div class="s">próximo mês</div></div>
-   <div class="tile"><div class="k">Realizado em ${y}</div><div class="v">R$ ${fmtMil(ano)} mil</div><div class="s">meses fechados + mês em andamento</div></div>`;
+   <div class="tile" title="Previsto − realizado no mês"><div class="k">${saldo<0?"Acima do previsto":"Saldo a realizar"}</div><div class="v ${saldo<0?"neg":""}">${V(Math.abs(saldo))}</div><div class="s">previsto − realizado</div></div>
+   <div class="tile" title="Títulos com data caixa depois do corte${progTot!==progMes?` · total com meses seguintes: R$ ${fmtMil(progTot)} mil`:""}"><div class="k">Programado após ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(progMes)}</div><div class="s">${nProg} títulos no mês</div></div>
+   <div class="tile" title="Previsto no fluxo de caixa para ${prox?mesNome(prox):""}"><div class="k">Previsto ${prox?mc(prox):"—"}</div><div class="v">${V(pProx)}</div><div class="s">próximo mês</div></div>
+   <div class="tile" title="Meses fechados + mês em andamento"><div class="k">Realizado ${y}</div><div class="v">${V(ano)}</div><div class="s">acumulado no ano</div></div>`;
 }
 
 /* ---------- gráfico ---------- */
 function renderChart(){
   const box=$("chart"), tip=$("tip"), gs=D.grupos.filter(okG);
   $("chTitle").textContent=`Gasto mensal · ${st.emps.length===D.empreendimentos.length?"todos os empreendimentos":st.emps.join(", ")}`;
-  $("legend").innerHTML=gs.map(g=>`<span><i class="sw" style="background:${cor(g)}"></i>${esc(g)}</span>`).join("")+
+  const base=D.grupos_base||D.grupos, extras=gs.filter(g=>!base.includes(g));
+  $("legend").innerHTML=gs.filter(g=>base.includes(g)).map(g=>`<span><i class="sw" style="background:${cor(g)}"></i>${esc(g)}</span>`).join("")+
+    (extras.length?`<span title="${esc(extras.join(", "))}"><i class="sw" style="background:var(--sx)"></i>Demais despesas da DRE (${extras.length})</span>`:"")+
     `<span><i class="sw out"></i>Previsto</span>`;
   const meses=[...new Set(D.serie.map(s=>s.mes))].filter(m=>st.anos.includes(m.slice(0,4))).sort();
   const rows=meses.map(m=>{const o={mes:m,status:null,parts:[]};

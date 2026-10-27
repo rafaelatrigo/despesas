@@ -14,10 +14,10 @@ De onde vem cada número:
 
 Dois acessos, cada um com a sua senha e o seu arquivo criptografado:
 - Líderes  (scripts/senha.txt)          -> site/data/lideres.enc.json   : os grupos de "grupos"
-- Completo (scripts/senha_completo.txt) -> site/data/completo.enc.json  : os grupos + a DRE inteira
+- Completo (scripts/senha_completo.txt) -> site/data/completo.enc.json  : os grupos + "grupos_completo" + a DRE inteira
 Opções:  --se-mudou   só gera se a BASE TEMPLATE, o fluxo ou o corte mudaram (para o agendador)
 """
-import json, sys, datetime, pathlib, os, base64, getpass, fnmatch, hashlib
+import json, sys, datetime, pathlib, os, base64, getpass, fnmatch, hashlib, re
 from collections import defaultdict
 try:
     import openpyxl
@@ -83,7 +83,11 @@ if "--se-mudou" in sys.argv:
         print(f"Sem alterações nas bases desde a última publicação ({f1.name} / {f2.name}). Nada a fazer.")
         sys.exit(0)
 
-grupos = {g["grupo_fechamento"]: g["nome"] for g in cfg["grupos"]}
+def ordem_dre(g):   # "8.1. STAND" -> 8.1 ; "13. CSC" -> 13
+    m = re.match(r"\s*(\d+(?:\.\d+)?)", g["grupo_fechamento"]); return float(m.group(1)) if m else 99
+todos_grupos = sorted(cfg["grupos"] + cfg.get("grupos_completo", []), key=ordem_dre)
+grupos = {g["grupo_fechamento"]: g["nome"] for g in todos_grupos}          # todos (acesso completo)
+nomes_base = [g["nome"] for g in cfg["grupos"]]                              # só os dos líderes
 emp_fluxo = {e["empresa_fluxo"]: e["nome"] for e in cfg["empreendimentos"]}
 emp_sienge = {e["empresa_sienge"]: e["nome"] for e in cfg["empreendimentos"]}
 linhas_dre = [l for l in cfg["dre"] if "soma" not in l]
@@ -168,8 +172,10 @@ base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name},
         "empreendimentos": list(emp_fluxo.values()), "grupos": list(grupos.values()),
         "serie": serie, "lancamentos": sorted(lanc, key=lambda x: x["data"], reverse=True)}
-pacotes = {"lideres": dict(base, perfil="lideres"),
-           "completo": dict(base, perfil="completo", dre=dre,
+so_base = lambda lista: [x for x in lista if x["grupo"] in nomes_base]
+pacotes = {"lideres": dict(base, perfil="lideres", grupos=[n for n in grupos.values() if n in nomes_base],
+                           grupos_base=nomes_base, serie=so_base(serie), lancamentos=so_base(base["lancamentos"])),
+           "completo": dict(base, perfil="completo", grupos_base=nomes_base, dre=dre,
                             dre_estrutura=[{k: v for k, v in l.items() if k in ("id", "nome", "soma", "pai", "antes")} for l in cfg["dre"]])}
 
 # ---------- criptografia ----------
@@ -204,6 +210,6 @@ if "--se-mudou" in sys.argv: assinatura_arq.write_text(assin)
 print(f"\nCorte: {corte:%d/%m/%Y} (sexta anterior a {hoje:%d/%m/%Y})")
 print(f"Mês em andamento {corte:%m/%Y} (R$ mil, gasto positivo):")
 for s in serie:
-    if s["mes"] == mes_corte and (abs(s["previsto"]) + abs(s["realizado"])) > 0.5:
+    if s["mes"] == mes_corte and s["grupo"] in nomes_base and (abs(s["previsto"]) + abs(s["realizado"])) > 0.5:
         print(f"  {s['empreendimento']:<26}{s['grupo']:<25} previsto {s['previsto']/1000:9.1f}   realizado {s['realizado']/1000:9.1f}")
 print(f"\nOK: dados gerados em {pasta_dados}  ({len(lanc)} lançamentos)")

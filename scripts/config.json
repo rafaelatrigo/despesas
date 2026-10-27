@@ -275,5 +275,31 @@
     ],
     "intervalo_segundos": 60,
     "estabilizar_segundos": 60
-  }
+  },
+  "grupos_completo": [
+    {
+      "grupo_fechamento": "7. TAXA DE INCORPORAÇÃO",
+      "nome": "Taxa de incorporação"
+    },
+    {
+      "grupo_fechamento": "9. DESPESAS TRIBUTÁRIAS",
+      "nome": "Despesas tributárias"
+    },
+    {
+      "grupo_fechamento": "10. ADV E CONTADOR",
+      "nome": "Advogado e contador"
+    },
+    {
+      "grupo_fechamento": "11. CONSULTORIAS",
+      "nome": "Consultorias"
+    },
+    {
+      "grupo_fechamento": "12. OUTRAS DESPESAS OPERACIONAIS",
+      "nome": "Outras despesas operacionais"
+    },
+    {
+      "grupo_fechamento": "13. CSC",
+      "nome": "CSC"
+    }
+  ]
 }
