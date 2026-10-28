@@ -4,7 +4,7 @@ Gera os dados do painel "Acompanhamento de despesas" (pasta site/data).
 De onde vem cada número:
 - PREVISTO: o Fluxo de Caixa modificado por último em "pasta_fluxo" (config.json), aba Base,
   todas as linhas (como as fórmulas SOMASES das abas DFC), por empresa, grupo fechamento, tipo (Operacional/Financiamento) e mês
-  (anos definidos em "anos" no config, por exemplo 2026 e 2027).
+  (anos definidos em "anos" no config; "auto" = ano anterior, vigente e seguinte, ex.: 2025 a 2027).
 - PREVISTO DO SISTEMA: para os meses em "previsto_sistema.meses" (ex.: 2026-11 e 2026-12), o previsto vem
   do relatório de previstos mais recente (aba Base Fluxo), no lugar do fluxo de caixa.
 - REALIZADO e LANÇAMENTOS: a BASE TEMPLATE BUDGET modificada por último em "pasta_budget",
@@ -76,7 +76,7 @@ if "--data" in sys.argv: hoje = datetime.date.fromisoformat(sys.argv[sys.argv.in
 corte = hoje - datetime.timedelta(days=(hoje.weekday() - 4) % 7)   # sexta mais recente (inclui hoje, se for sexta)
 mes_corte = f"{corte:%Y-%m}"
 _anos = cfg.get("anos", "auto")
-anos = ({corte.year, corte.year + 1} if _anos == "auto" else set(_anos))   # auto: ano vigente e o seguinte
+anos = ({corte.year - 1, corte.year, corte.year + 1} if _anos == "auto" else set(_anos))   # auto: ano anterior, vigente e seguinte
 
 # ---------- só roda se algo mudou (modo agendado) ----------
 assinatura_arq = AQUI / ".assinatura"

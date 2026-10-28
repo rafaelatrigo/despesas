@@ -19,11 +19,11 @@ O script procura sozinho, em cada pasta, o arquivo **modificado por último**:
 
 | Dado | Pasta (`scripts/config.json`) | Arquivo e aba | Regra |
 |---|---|---|---|
-| **Previsto** (mês a mês: ano vigente e o seguinte, automático) | `CONTROLADORIA\FLUXO DE CAIXA CONSOLIDADO` | fluxo de caixa mais recente, aba **Base** | Todas as linhas, como as fórmulas SOMASES das abas DFC, por empresa, grupo fechamento, tipo e mês |
+| **Previsto** (mês a mês: ano anterior, vigente e seguinte, automático) | `CONTROLADORIA\FLUXO DE CAIXA CONSOLIDADO` | fluxo de caixa mais recente, aba **Base** | Todas as linhas, como as fórmulas SOMASES das abas DFC, por empresa, grupo fechamento, tipo e mês |
 | **Previsto do sistema** (só os meses em `previsto_sistema.meses`, hoje nov/26 e dez/26) | `previsto_sistema.pasta` (padrão: `CONTROLADORIA\DESPESAS`) | relatório de previstos mais recente (`*PREVISTO*.xl*`), aba **Base Fluxo** | Substitui o previsto do fluxo nesses meses, por empresa e grupo fechamento. Os outros meses seguem com o fluxo |
 | **Realizado** e **lançamentos** | `CONTROLADORIA\DESPESAS` | BASE TEMPLATE BUDGET mais recente, aba **Realizado** | Considera = S, conciliado S e N, VALOR_V3 por DATA CAIXA |
 
-- **Corte:** a sexta-feira mais recente, contando o próprio dia. Se roda na sexta, o corte é a própria sexta; de sábado a quinta, é a sexta passada. Assim, a apresentação de segunda mostra tudo o que foi pago até sexta. O "mês vigente" é o mês do corte, e o "próximo mês" é o seguinte. A troca acontece sozinha na primeira sexta-feira do mês novo. Os anos também viram sozinhos (`"anos": "auto"` no config).
+- **Corte:** a sexta-feira mais recente, contando o próprio dia. Se roda na sexta, o corte é a própria sexta; de sábado a quinta, é a sexta passada. Assim, a apresentação de segunda mostra tudo o que foi pago até sexta. O "mês vigente" é o mês do corte, e o "próximo mês" é o seguinte. A troca acontece sozinha na primeira sexta-feira do mês novo. Os anos também viram sozinhos (`"anos": "auto"` no config = ano anterior, vigente e seguinte). O gráfico abre com todos os anos e o mês vigente fica sempre destacado.
 - **Meses:**
   - meses anteriores ao corte são fechados;
   - o mês do corte soma do dia 1 até o corte;

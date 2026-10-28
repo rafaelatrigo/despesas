@@ -9,3 +9,5 @@ scripts/caminho_fluxo.txt
 site/data/marketing.json
 atualizacao.log
 servico.log
+*.xl*
+*.csv
