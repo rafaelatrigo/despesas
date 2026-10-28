@@ -177,7 +177,7 @@ details.fbox>summary{display:none}
       <p style="margin:0 0 12px;font-size:12px;color:var(--muted)" id="dica">Clique para filtrar. Segure <b>Ctrl</b> e clique para selecionar mais de um.</p>
       <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Despesas</h3><div id="fGrp"></div></div>
-      <div class="fsec"><h3>Período do gráfico</h3><div id="fAno"></div></div>
+      <div class="fsec"><h3>Período</h3><div id="fAno"></div></div>
     </details>
   </aside>
   <main>
@@ -300,6 +300,10 @@ if(!window.crypto||!crypto.subtle) msg.textContent="Abra o painel pelo endereço
 const ANOS=()=>[...new Set(D.serie.map(s=>s.mes.slice(0,4)))].sort();
 const cor=g=>{const i=(D.grupos_base||D.grupos).indexOf(g); return i>=0?`var(--s${i+1})`:"var(--sx)";};
 const okE=e=>st.emps.includes(e), okG=g=>st.grps.includes(g);
+/* período = anos marcados no filtro "Período do gráfico" (quadros, tabela e DRE acumulam por ele) */
+const noPer=m=>st.anos.includes(m.slice(0,4));
+function rotPer(){const a=[...st.anos].sort(); if(a.length===1) return a[0];
+  const seq=a.every((x,i)=>!i||+x===+a[i-1]+1); return seq?`${a[0]} a ${a[a.length-1]}`:a.slice(0,-1).join(", ")+" e "+a[a.length-1];}
 function salvar(){try{localStorage.setItem("desp-filtros",JSON.stringify(st))}catch(e){}}
 const TOQUE=window.matchMedia&&matchMedia("(pointer:coarse)").matches;   /* celular/tablet: sem Ctrl, cada toque soma */
 function lista(id,key,opcoes,rotTodos,swatch){
@@ -343,17 +347,17 @@ function render(){renderTiles();renderChart();renderTable();renderDRE();renderLa
 /* ---------- quadros ---------- */
 /* % do realizado sobre o previsto do ano: até 90% cor padrão, acima de 90% amarelo, acima de 100% vermelho (sempre com ícone + texto) */
 function alertaAno(real,prev){
-  if(!prev) return "acumulado no ano";
+  if(!prev) return "acumulado no período";
   const pc=real/prev*100, n=pc.toLocaleString("pt-BR",{maximumFractionDigits:0})+"%";
-  if(pc>100) return `<span class="alerta crit" title="Realizado acima do previsto do ano (${n})">▲ ${n} · estourou</span>`;
-  if(pc>90)  return `<span class="alerta warn" title="Realizado acima de 90% do previsto do ano (${n})">⚠ ${n} do previsto</span>`;
-  return `${n} do previsto do ano`;
+  if(pc>100) return `<span class="alerta crit" title="Realizado acima do previsto do período (${n})">▲ ${n} · estourou</span>`;
+  if(pc>90)  return `<span class="alerta warn" title="Realizado acima de 90% do previsto do período (${n})">⚠ ${n} do previsto</span>`;
+  return `${n} do previsto do período`;
 }
 function renderTiles(){
   const m=D.mes_atual, y=m.slice(0,4), prox=[...new Set(D.serie.map(s=>s.mes))].filter(x=>x>m).sort()[0];
   const prev=soma(s=>s.mes===m,"previsto"), real=soma(s=>s.mes===m,"realizado"), saldo=prev-real, pct=prev?real/prev:null;
-  const ano=soma(s=>s.mes.startsWith(y)&&s.status!=="previsto","realizado");
-  const pProx=prox?soma(s=>s.mes===prox,"previsto"):0, prevAno=soma(s=>s.mes.startsWith(y),"previsto");
+  const ano=soma(s=>noPer(s.mes)&&s.status!=="previsto","realizado"), per=rotPer();
+  const pProx=prox?soma(s=>s.mes===prox,"previsto"):0, prevAno=soma(s=>noPer(s.mes),"previsto");
   const prog=D.lancamentos.filter(l=>l.situacao==="Programado"&&okE(l.empreendimento)&&okG(l.grupo));
   const progMes=prog.filter(l=>l.data.slice(0,7)===m).reduce((a,l)=>a+l.valor,0), progTot=prog.reduce((a,l)=>a+l.valor,0);
 const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
@@ -365,8 +369,8 @@ const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
      <div class="meter" aria-hidden="true"><i style="width:${Math.min(100,(pct||0)*100)}%"></i></div></div>
    <div class="tile" title="Previsto − realizado no mês"><div class="k">${saldo<0?"Acima do previsto":"Saldo a realizar"}</div><div class="v ${saldo<0?"neg":""}">${V(Math.abs(saldo))}</div><div class="s">previsto − realizado</div></div>
    <div class="tile" title="Títulos com data caixa depois do corte${progTot!==progMes?` · total com meses seguintes: R$ ${fmtMil(progTot)} mil`:""}"><div class="k">Programado após ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(progMes)}</div><div class="s">${nProg} títulos no mês</div></div>
-   <div class="tile" title="Soma do previsto no fluxo de caixa para todos os meses de ${y} (meses fechados pelo valor do fluxo + meses em aberto pelo orçado)"><div class="k">Previsto ${y}</div><div class="v">${V(prevAno)}</div><div class="s">fluxo de caixa · ano inteiro</div></div>
-   <div class="tile" title="Meses fechados + mês em andamento"><div class="k">Realizado ${y}</div><div class="v">${V(ano)}</div><div class="s">${alertaAno(ano,prevAno)}</div></div>`;
+   <div class="tile" title="Soma do previsto no fluxo de caixa de todos os meses do período marcado no filtro (${per})"><div class="k">Previsto ${per}</div><div class="v">${V(prevAno)}</div><div class="s">fluxo de caixa · período inteiro</div></div>
+   <div class="tile" title="Meses fechados + mês em andamento (até o corte) do período marcado no filtro (${per})"><div class="k">Realizado ${per}</div><div class="v">${V(ano)}</div><div class="s">${alertaAno(ano,prevAno)}</div></div>`;
 }
 
 /* ---------- gráfico (ligado à tabela de lançamentos) ---------- */
@@ -448,13 +452,13 @@ function renderTable(){
   const linhas=[];
   D.empreendimentos.filter(okE).forEach(e=>D.grupos.filter(okG).forEach(g=>{
     const it=D.serie.filter(s=>s.empreendimento===e&&s.grupo===g), a=it.find(s=>s.mes===m)||{}, n=it.find(s=>s.mes===prox)||{};
-    const ano=it.filter(s=>s.mes.startsWith(y)&&s.status!=="previsto").reduce((t,s)=>t+(s.realizado||0),0);
+    const ano=it.filter(s=>noPer(s.mes)&&s.status!=="previsto").reduce((t,s)=>t+(s.realizado||0),0);
     const l={e,g,p:a.previsto||0,r:a.realizado||0,n:n.previsto||0,ano};
     if([l.p,l.r,l.n,l.ano].some(x=>Math.abs(x)>=0.5)) linhas.push(l);}));
   const tot=linhas.reduce((t,l)=>({p:t.p+l.p,r:t.r+l.r,n:t.n+l.n,ano:t.ano+l.ano}),{p:0,r:0,n:0,ano:0});
   const row=(l,cls="")=>{const sd=l.p-l.r, pc=l.p?Math.round(l.r/l.p*100)+"%":"—";
     return `<tr class="${cls}"><td>${esc(l.e)}</td><td class="l">${l.g?`<i class="sw" style="background:${cor(l.g)};margin-right:6px;vertical-align:-1px"></i>`:""}${esc(l.g||"")}</td><td>${fmtMil(l.p)}</td><td>${fmtMil(l.r)}</td><td class="${sd<0?"neg":""}">${fmtMil(sd)}</td><td>${pc}</td><td>${fmtMil(l.n)}</td><td>${fmtMil(l.ano)}</td></tr>`};
-  $("tbl").innerHTML=`<thead><tr><th>Empreendimento</th><th class="l">Despesa</th><th>Previsto</th><th>Realizado</th><th>Saldo</th><th>% exec.</th><th>Previsto ${prox?mesCurto(prox):""}</th><th>Realizado ${y}</th></tr></thead>
+  $("tbl").innerHTML=`<thead><tr><th>Empreendimento</th><th class="l">Despesa</th><th>Previsto</th><th>Realizado</th><th>Saldo</th><th>% exec.</th><th>Previsto ${prox?mesCurto(prox):""}</th><th>Realizado ${rotPer()}</th></tr></thead>
    <tbody>${linhas.map(l=>row(l)).join("")}${linhas.length>1?row({e:"Total",g:"",...tot},"tot"):""}</tbody>`;
 }
 
@@ -467,8 +471,7 @@ function renderDRE(){
   const idx={}; D.dre.forEach(x=>{if(okE(x.empreendimento)){const k=x.linha+"|"+x.mes; idx[k]=idx[k]||{p:0,r:0}; idx[k].p+=x.previsto||0; idx[k].r+=x.realizado||0;}});
   const v=(id,f)=>{const L=porId[id]; if(L.soma) return L.soma.reduce((a,s)=>a+v(s,f),0); return meses.filter(f.m).reduce((a,mm)=>a+((idx[id+"|"+mm]||{})[f.c]||0),0);};
   const col=[["Previsto "+mesCurto(m),{m:x=>x===m,c:"p"}],["Realizado até "+fmtD(D.corte).slice(0,5),{m:x=>x===m,c:"r"}],null,
-             ["Previsto "+(prox?mesCurto(prox):""),{m:x=>x===prox,c:"p"}],["Realizado "+y,{m:x=>x.startsWith(y)&&x<=m,c:"r"}]];
-  if(temSeg) col.push(["Previsto "+anoSeg,{m:x=>x.startsWith(anoSeg),c:"p"}]);
+             ["Previsto "+(prox?mesCurto(prox):""),{m:x=>x===prox,c:"p"}],["Realizado "+rotPer(),{m:x=>noPer(x)&&x<=m,c:"r"}],["Previsto "+rotPer(),{m:x=>noPer(x),c:"p"}]];
   $("dreTitle").textContent=`DRE · ${mesNome(m)}`;
   const linhas=[]; E.filter(l=>!l.pai).forEach(l=>{ linhas.push(l); if(l.soma&&E.some(x=>x.pai===l.id)) E.filter(x=>x.pai===l.id).forEach(f=>linhas.push(f)); });
   const chaves=new Set(["receita_liq","lucro_bruto","ebitda","lucro_liq"]);
