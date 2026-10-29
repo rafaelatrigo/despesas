@@ -231,6 +231,8 @@ real2, lanc2 = defaultdict(float), []
 # Títulos que entram pelo valor líquido (pagamento menos o desconto do próprio título), definidos em config.json
 liq = {(txt(t.get("empresa")), txt(t["titulo"])): t for t in cfg.get("titulos_liquidos", [])}
 pend = defaultdict(list)   # (empresa, título, parcela) -> linhas do título
+# Títulos lançados numa empresa que devem aparecer em outra (ex.: pago pela Carozzo DI, mas é do Wellness): config.json > "titulos_realocados"
+realoc = {(txt(t["empresa"]), txt(t["titulo"])): txt(t["para"]) for t in cfg.get("titulos_realocados", [])}
 def lancar(r, valor, sufixo_conta=""):
     e = txt(r[cL]); d = como_data(r[cI])
     global corte
@@ -261,6 +263,10 @@ for r in rows:
     n_lidas += 1
     if len(r) <= maxc: r = tuple(r) + (None,) * (maxc + 1 - len(r))
     e = txt(r[cL])
+    if realoc:
+        _t = re.sub(r"\.0$", "", txt(r[cO]))
+        if (e, _t) in realoc:
+            r = list(r); r[cL] = realoc[(e, _t)]; r = tuple(r); e = r[cL]
     if (e not in emp_sienge and e not in emp2_sienge) or txt(r[cAG]) != "S": continue
     d = como_data(r[cI])
     if not d or d.year not in anos: continue

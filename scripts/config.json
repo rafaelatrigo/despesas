@@ -392,5 +392,25 @@
   },
   "completo_ocultar": [
     "Despesas tributárias"
+  ],
+  "titulos_realocados": [
+    {
+      "empresa": "CAROZZO DESENVOLVIMENTO IMOBILIARIO LTDA",
+      "titulo": "35200",
+      "para": "CAROZZO WELLNESS JARDIM ARMAÇÃO LTDA",
+      "obs": "Pago pela Carozzo DI, mas é despesa do Wellness"
+    },
+    {
+      "empresa": "CAROZZO DESENVOLVIMENTO IMOBILIARIO LTDA",
+      "titulo": "35201",
+      "para": "CAROZZO WELLNESS JARDIM ARMAÇÃO LTDA",
+      "obs": "Pago pela Carozzo DI, mas é despesa do Wellness"
+    },
+    {
+      "empresa": "CAROZZO DESENVOLVIMENTO IMOBILIARIO LTDA",
+      "titulo": "35300",
+      "para": "CAROZZO WELLNESS JARDIM ARMAÇÃO LTDA",
+      "obs": "Pago pela Carozzo DI, mas é despesa do Wellness"
+    }
   ]
 }
