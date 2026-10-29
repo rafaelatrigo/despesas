@@ -148,7 +148,7 @@ details.fbox>summary{display:none}
   <div class="brandbox">
     <img class="logo" id="logo" src="logo.png" alt="Carozzo" onerror="this.style.display='none';document.getElementById('logoTxt').style.display='block'">
     <span class="logo-txt" id="logoTxt">CAROZZO</span>
-    <div><h1>Acompanhamento de despesas</h1><p>Previsto x realizado por empreendimento · uso interno</p></div>
+    <div><h1>Acompanhamento de despesas</h1><p id="hsub">Previsto x realizado por empreendimento · uso interno</p></div>
   </div>
   <div class="acoes hidden" id="acoes">
     <div class="stamp" id="stamp"></div>
@@ -175,7 +175,8 @@ details.fbox>summary{display:none}
       <div class="menu-tit">FILTROS</div>
       <span class="perfil" id="perfil"></span>
       <p style="margin:0 0 12px;font-size:12px;color:var(--muted)" id="dica">Clique para filtrar. Segure <b>Ctrl</b> e clique para selecionar mais de um.</p>
-      <div class="fsec"><h3>Empreendimentos</h3><div id="fEmp"></div></div>
+      <div class="fsec hidden" id="secVis"><h3>Visão</h3><div id="fVis"></div></div>
+      <div class="fsec"><h3 id="hEmp">Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Despesas</h3><div id="fGrp"></div></div>
       <div class="fsec"><h3>Período</h3><div id="fAno"></div></div>
     </details>
@@ -221,10 +222,14 @@ const mesNome=m=>{const[y,mm]=m.split("-");return `${MESES_L[+mm-1]}/${y}`};
 const mesCurto=m=>{const[y,mm]=m.split("-");return MESES[+mm-1]+(mm==="01"?"/"+y.slice(2):"")};
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const $=id=>document.getElementById(id);
-let D=null, SENHA=null, st={emps:null,grps:null,anos:null};
+let RAW=null, VIS="empreendimentos", D=null, SENHA=null, st={emps:null,grps:null,anos:null};
 try{const s=JSON.parse(localStorage.getItem("desp-filtros")||"null"); if(s) st=s;}catch(e){}
 
 /* ---------- acesso e dados ---------- */
+/* visões: empreendimentos (padrão) e empresas. O acesso completo traz as duas (RAW.visoes); o acesso empresas traz só a dela */
+function setDados(x){ RAW=x; if(!(RAW.visoes&&RAW.visoes[VIS])) VIS=RAW.perfil==="empresas"?"empresas":"empreendimentos";
+  D=(VIS==="empresas"&&RAW.visoes&&RAW.visoes.empresas)?{...RAW,...RAW.visoes.empresas}:RAW; }
+const UN=()=>D.unidade||"Empreendimento", UNS=()=>D.unidades||"Empreendimentos";
 const b64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
 async function decifrar(p,senha){
   const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(senha),"PBKDF2",false,["deriveKey"]);
@@ -233,7 +238,7 @@ async function decifrar(p,senha){
 }
 async function carregar(senha){
   let achou=false;
-  for(const perfil of ["completo","lideres"]){
+  for(const perfil of ["completo","empresas","lideres"]){
     const r=await fetch(`data/${perfil}.enc.json?t=${Date.now()}`,{cache:"no-store"});
     if(!r.ok) continue; achou=true;
     try{return await decifrar(await r.json(),senha);}catch(e){ if(e.name!=="OperationError") throw e; }
@@ -243,7 +248,7 @@ async function carregar(senha){
 const lock=$("lock"), painel=$("painel"), msg=$("msg"), btn=$("entrar");
 async function entrar(senha,lembrar){
   btn.disabled=true; msg.textContent=""; btn.textContent="Abrindo...";
-  try{ D=await carregar(senha); SENHA=senha;
+  try{ setDados(await carregar(senha)); SENHA=senha;
     if(lembrar){try{sessionStorage.setItem("desp-senha",senha)}catch(e){}}
     lock.classList.add("hidden"); painel.classList.remove("hidden"); $("acoes").classList.remove("hidden"); init(); detectarServico();
   }catch(e){ msg.textContent=e.message; try{sessionStorage.removeItem("desp-senha")}catch(_){} }
@@ -255,7 +260,7 @@ $("atualizar").onclick=async()=>{
   const b=$("atualizar"); b.disabled=true; b.textContent="Atualizando...";
   try{ const novo=await carregar(SENHA);
     if(novo.gerado_em===D.gerado_em) toast(`Já está com a versão mais recente (dados de ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}).`);
-    else{ D=novo; init(); toast(`Dados atualizados: gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`); }
+    else{ setDados(novo); init(); toast(`Dados atualizados: gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`); }
   }catch(e){ toast("Não foi possível atualizar: "+e.message); }
   finally{ b.disabled=false; b.textContent="Atualizar"; }
 };
@@ -282,7 +287,7 @@ async function acompanhar(){
     b.textContent="Publicando no site...";
     for(let i=0;i<60;i++){ await espera(5000);
       try{const v=await (await fetch(`data/versao.json?t=${Date.now()}`,{cache:"no-store"})).json();
-        if(v.gerado_em!==antes){ D=await carregar(SENHA); init(); toast(`Painel atualizado: dados de ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`); return; }}catch(e){}
+        if(v.gerado_em!==antes){ setDados(await carregar(SENHA)); init(); toast(`Painel atualizado: dados de ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`); return; }}catch(e){}
     }
     toast("Enviado ao GitHub, mas o site ainda não publicou. Clique em Atualizar em alguns minutos.");
   }catch(e){ toast("O serviço local parou de responder: "+e.message); }
@@ -328,7 +333,14 @@ function init(){
   const anoAt=D.mes_atual.slice(0,4);                                              // padrão: todos os anos (ano anterior, atual e seguinte)
   if(st.v!==2||!Array.isArray(st.anos)||!st.anos.includes(anoAt)){ st.anos=ANOS(); st.v=2; } fix("anos",ANOS());
   $("stamp").innerHTML=`Dados de ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}<br>Realizado até ${fmtD(D.corte)}`;
-  $("perfil").textContent=D.perfil==="completo"?"Acesso completo":"Acesso líderes";
+  $("perfil").textContent={completo:"Acesso completo",empresas:"Acesso empresas"}[RAW.perfil]||"Acesso líderes";
+  const vis=RAW.visoes?["empreendimentos","empresas"].filter(k=>k==="empreendimentos"||RAW.visoes[k]):[];
+  $("secVis").classList.toggle("hidden",vis.length<2);
+  if(vis.length>1){ $("fVis").className="fgrid";
+    $("fVis").innerHTML=vis.map(k=>`<button type="button" class="fbtn" aria-pressed="${k===VIS}">${k==="empresas"?"Empresas":"Empreendimentos"}</button>`).join("");
+    $("fVis").querySelectorAll("button").forEach((bt,i)=>bt.onclick=()=>{ if(vis[i]===VIS) return; VIS=vis[i]; st.emps=null; st.grps=null; setDados(RAW); XF.sel={}; XF.min=XF.max=null; init(); }); }
+  $("hEmp").textContent=UNS(); COLS[1].n=UN();
+  $("hsub").textContent=`Previsto x realizado por ${UN().toLowerCase()} · uso interno`;
   lista("fEmp","emps",D.empreendimentos,"Todos");
   lista("fGrp","grps",D.grupos,"Todas",cor);
   lista("fAno","anos",ANOS(),"Todos");
@@ -376,7 +388,7 @@ const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
 /* ---------- gráfico (ligado à tabela de lançamentos) ---------- */
 function renderChart(){
   const box=$("chart"), tip=$("tip"), gs=D.grupos.filter(okG), det=detalhe();
-  $("chTitle").textContent=`Gasto mensal · ${st.emps.length===D.empreendimentos.length?"todos os empreendimentos":st.emps.join(", ")}`;
+  $("chTitle").textContent=`Gasto mensal · ${st.emps.length===D.empreendimentos.length?(D.unidade==="Empresa"?"todas as empresas":"todos os empreendimentos"):st.emps.join(", ")}`;
   $("chSub").innerHTML=det
     ? `R$ mil · <b>realizado só dos lançamentos filtrados na tabela</b> (o previsto não se aplica a filtro de credor, conta, título, situação ou valor)`
     : `R$ mil · meses fechados (cor cheia), mês em andamento até o corte e previsto (tom claro com contorno tracejado) · <b>clique numa barra</b> para ver outro mês na tabela (Ctrl+clique soma meses)`;
@@ -448,7 +460,7 @@ function niceStep(v){const p=Math.pow(10,Math.floor(Math.log10(v||1))),n=v/p;ret
 /* ---------- tabela por empreendimento ---------- */
 function renderTable(){
   const m=D.mes_atual,y=m.slice(0,4), prox=[...new Set(D.serie.map(s=>s.mes))].filter(x=>x>m).sort()[0];
-  $("tbTitle").textContent=`Por empreendimento · ${mesNome(m)}`;
+  $("tbTitle").textContent=`Por ${UN().toLowerCase()} · ${mesNome(m)}`;
   const linhas=[];
   D.empreendimentos.filter(okE).forEach(e=>D.grupos.filter(okG).forEach(g=>{
     const it=D.serie.filter(s=>s.empreendimento===e&&s.grupo===g), a=it.find(s=>s.mes===m)||{}, n=it.find(s=>s.mes===prox)||{};
@@ -458,7 +470,7 @@ function renderTable(){
   const tot=linhas.reduce((t,l)=>({p:t.p+l.p,r:t.r+l.r,n:t.n+l.n,ano:t.ano+l.ano}),{p:0,r:0,n:0,ano:0});
   const row=(l,cls="")=>{const sd=l.p-l.r, pc=l.p?Math.round(l.r/l.p*100)+"%":"—";
     return `<tr class="${cls}"><td>${esc(l.e)}</td><td class="l">${l.g?`<i class="sw" style="background:${cor(l.g)};margin-right:6px;vertical-align:-1px"></i>`:""}${esc(l.g||"")}</td><td>${fmtMil(l.p)}</td><td>${fmtMil(l.r)}</td><td class="${sd<0?"neg":""}">${fmtMil(sd)}</td><td>${pc}</td><td>${fmtMil(l.n)}</td><td>${fmtMil(l.ano)}</td></tr>`};
-  $("tbl").innerHTML=`<thead><tr><th>Empreendimento</th><th class="l">Despesa</th><th>Previsto</th><th>Realizado</th><th>Saldo</th><th>% exec.</th><th>Previsto ${prox?mesCurto(prox):""}</th><th>Realizado ${rotPer()}</th></tr></thead>
+  $("tbl").innerHTML=`<thead><tr><th>${UN()}</th><th class="l">Despesa</th><th>Previsto</th><th>Realizado</th><th>Saldo</th><th>% exec.</th><th>Previsto ${prox?mesCurto(prox):""}</th><th>Realizado ${rotPer()}</th></tr></thead>
    <tbody>${linhas.map(l=>row(l)).join("")}${linhas.length>1?row({e:"Total",g:"",...tot},"tot"):""}</tbody>`;
 }
 
@@ -486,7 +498,7 @@ function renderDRE(){
 
 /* ---------- lançamentos ---------- */
 /* ---------- lançamentos com filtro de coluna estilo Excel (ligado ao gráfico e ao MENU) ---------- */
-const COLS=[{k:"data",n:"Data caixa"},{k:"empreendimento",n:"Empreendimento",menu:"emps"},{k:"grupo",n:"Despesa",menu:"grps"},
+let COLS=[{k:"data",n:"Data caixa"},{k:"empreendimento",n:"Empreendimento",menu:"emps"},{k:"grupo",n:"Despesa",menu:"grps"},
   {k:"credor",n:"Credor"},{k:"conta",n:"Conta"},{k:"titulo",n:"Título"},{k:"valor",n:"Valor",num:true},{k:"situacao",n:"Situação"}];
 const DETALHE=["credor","conta","titulo","situacao"];
 const XF={sel:{},min:null,max:null,meses:null,sort:{k:"data",dir:-1}};

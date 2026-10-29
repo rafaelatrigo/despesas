@@ -337,5 +337,57 @@
       "titulo": "30704",
       "obs": "Considerar só o líquido (R$ 54.956,60): pagamento de terreno menos o desconto do título"
     }
-  ]
+  ],
+  "empresas": {
+    "empresas": [
+      {
+        "nome": "Carozzo Desenvolvimento",
+        "empresa_fluxo": "CAROZZO DESENVOLVIMENTO IMOBILIARIO LTDA",
+        "empresa_sienge": "CAROZZO DESENVOLVIMENTO IMOBILIARIO LTDA"
+      },
+      {
+        "nome": "Altamente Rentável",
+        "empresa_fluxo": "ALTAMENTE RENTAVEL IMOBILIARIA DIGITAL LTDA",
+        "empresa_sienge": "ALTAMENTE RENTAVEL IMOBILIARIA DIGITAL LTDA"
+      }
+    ],
+    "salarios_pj": {
+      "nome": "Salários PJ",
+      "conta_contendo": "Salarios PJ"
+    },
+    "grupos": [
+      {
+        "grupo_fechamento": "MÃO DE OBRA PRÓPRIA E ENCARGOS",
+        "nome": "Mão de obra e encargos"
+      },
+      {
+        "grupo_fechamento": "11. CONSULTORIAS",
+        "nome": "Consultorias"
+      },
+      {
+        "grupo_fechamento": "12. OUTRAS DESPESAS OPERACIONAIS",
+        "nome": "Outras despesas operacionais"
+      },
+      {
+        "grupo_fechamento": "8. MARKETING (PRODUTO)",
+        "nome": "Marketing"
+      },
+      {
+        "grupo_fechamento": "10. ADV E CONTADOR",
+        "nome": "Adv e contador"
+      },
+      {
+        "grupo_fechamento": "9. DESPESAS TRIBUTÁRIAS",
+        "nome": "Despesas tributárias"
+      }
+    ],
+    "demais": "Demais despesas",
+    "grupos_fora": [
+      "1. OPERACIONAIS",
+      "5. OUTRAS RECEITAS",
+      "13. CSC",
+      "CSC"
+    ],
+    "obs": "Só tipo Operacional. Salários PJ: toda conta que contém o texto de conta_contendo, em qualquer grupo. grupos_fora: receitas e rateio do CSC (não são despesa). O resto vai para Demais despesas."
+  }
 }

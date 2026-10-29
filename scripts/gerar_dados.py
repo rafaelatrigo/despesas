@@ -17,9 +17,11 @@ De onde vem cada número:
 - CORTE: a sexta-feira mais recente, contando o próprio dia (rodou na sexta = a própria sexta;
   sábado a quinta = a sexta passada). Teste: --data AAAA-MM-DD
 
-Dois acessos, cada um com a sua senha e o seu arquivo criptografado:
+Três acessos, cada um com a sua senha e o seu arquivo criptografado:
 - Líderes  (scripts/senha.txt)          -> site/data/lideres.enc.json   : os grupos de "grupos"
-- Completo (scripts/senha_completo.txt) -> site/data/completo.enc.json  : os grupos + "grupos_completo" + a DRE inteira
+- Completo (scripts/senha_completo.txt) -> site/data/completo.enc.json  : os grupos + "grupos_completo" + a DRE inteira + a visão empresas
+- Empresas (scripts/senha_empresas.txt) -> site/data/empresas.enc.json  : visão das empresas em config.json > "empresas"
+  (Salários PJ em categoria própria, em qualquer grupo; demais grupos de despesa operacional em "Demais despesas")
 Opções:  --se-mudou   só gera se a BASE TEMPLATE, o fluxo ou o corte mudaram (para o agendador)
 """
 import json, sys, datetime, pathlib, os, base64, getpass, fnmatch, hashlib, re, unicodedata
@@ -105,6 +107,23 @@ nomes_base = [g["nome"] for g in cfg["grupos"]]                              # s
 emp_fluxo = {e["empresa_fluxo"]: e["nome"] for e in cfg["empreendimentos"]}
 emp_sienge = {e["empresa_sienge"]: e["nome"] for e in cfg["empreendimentos"]}
 linhas_dre = [l for l in cfg["dre"] if "soma" not in l]
+
+# ---------- visão EMPRESAS (Carozzo Desenvolvimento, Altamente Rentável...) definida em config.json > "empresas" ----------
+CE = cfg.get("empresas") or {}
+emp2_fluxo = {e["empresa_fluxo"]: e["nome"] for e in CE.get("empresas", [])}
+emp2_sienge = {e["empresa_sienge"]: e["nome"] for e in CE.get("empresas", [])}
+grupos2 = {gkey(g["grupo_fechamento"]): g["nome"] for g in CE.get("grupos", [])}
+fora2 = {gkey(g) for g in CE.get("grupos_fora", [])}               # receitas / rateios: não são despesa
+pj2 = CE.get("salarios_pj") or {}
+pj2_key = gkey(pj2.get("conta_contendo", "")) if pj2 else ""
+demais2 = CE.get("demais", "Demais despesas")
+cats2 = ([pj2["nome"]] if pj2 else []) + list(dict.fromkeys(grupos2.values())) + [demais2]
+def cat_empresa(g, conta, tipo):
+    """Categoria da visão empresas. Salários PJ vai para a categoria própria em qualquer grupo em que apareça."""
+    if tipo != "Operacional": return None
+    if pj2_key and pj2_key in gkey(conta): return pj2["nome"]
+    if not g or g in fora2: return None
+    return grupos2.get(g, demais2)
 def linha_de(grupo, tipo):
     for l in linhas_dre:
         if l["tipo"] == tipo and (l["grupos"] == "*" or grupo in {gkey(x) for x in l["grupos"]}): return l["id"]
@@ -121,12 +140,21 @@ bix = {txt(h): i for i, h in enumerate(cab) if isinstance(h, str)}
 for c in ("Nome empresa", "Tipo análise", "Tipo", "GRUPO FECHAMENTO"):
     if c not in bix: sys.exit(f"Coluna '{c}' não encontrada na aba {cfg['aba_fluxo']} de {f_fluxo.name}")
 bC, bB, bJ, bL = bix["Nome empresa"], bix["Tipo análise"], bix["Tipo"], bix["GRUPO FECHAMENTO"]
+bK = bix.get("Conta")
+prev2 = defaultdict(float)      # visão empresas: (empresa, categoria, mes) -> gasto positivo
 prev_g = defaultdict(float)     # (emp, grupo_nome, mes) -> gasto positivo
 prev_d = defaultdict(float)     # (emp, linha_dre, mes) -> valor com sinal (entrada +, saída -)
 tipo_grupo = defaultdict(lambda: defaultdict(int))   # grupo -> tipo (Operacional/Financiamento) visto no fluxo
 for r in rows:
     e, g, tipo = txt(r[bC]), gkey(r[bL]), txt(r[bJ])
     if g and tipo: tipo_grupo[g][tipo] += 1
+    if e in emp2_fluxo:
+        c2 = cat_empresa(g, r[bK] if bK is not None else "", tipo)
+        if c2:
+            for m, i in mes_cols.items():
+                v = num(r[i])
+                if v: prev2[(emp2_fluxo[e], c2, m)] += -v
+        continue
     if e not in emp_fluxo: continue   # todas as linhas da Base, como as fórmulas das abas DFC
     lid = linha_de(g, tipo)
     for m, i in mes_cols.items():
@@ -198,11 +226,21 @@ cI, cL, cAG, cAJ, cAP, cAM = (col("DATA CAIXA"), col("NOME DA EMPRESA"), col("CO
 cH, cR, cX, cO, cP = col("CONCILIADO"), col("NOME_CREDOR"), col("CONTA DO PLANO FINANCEIRO"), col("TITULO"), col("PARCELA")
 cRed = ix.get("REDUTORA")
 real_g, real_d = defaultdict(float), defaultdict(float)
+real2, lanc2 = defaultdict(float), []
 # Títulos que entram pelo valor líquido (pagamento menos o desconto do próprio título), definidos em config.json
 liq = {(txt(t.get("empresa")), txt(t["titulo"])): t for t in cfg.get("titulos_liquidos", [])}
 pend = defaultdict(list)   # (empresa, título, parcela) -> linhas do título
 def lancar(r, valor, sufixo_conta=""):
     e = txt(r[cL]); d = como_data(r[cI])
+    situ = "Programado" if d > corte else ("Conciliado" if txt(r[cH]) == "S" else "Não conciliado")
+    if e in emp2_sienge:     # visão empresas
+        c2 = cat_empresa(gkey(r[cAP]), r[cX], txt(r[cAM]))
+        if not c2: return
+        if d <= corte: real2[(emp2_sienge[e], c2, f"{d:%Y-%m}")] += -valor
+        lanc2.append({"data": d.isoformat(), "empreendimento": emp2_sienge[e], "grupo": c2, "credor": txt(r[cR]),
+                      "conta": txt(r[cX]) + sufixo_conta, "titulo": f"{txt(r[cO])}/{txt(r[cP])}".strip("/"),
+                      "valor": round(-valor, 2), "situacao": situ})
+        return
     g, tipo, m, en = gkey(r[cAP]), txt(r[cAM]), f"{d:%Y-%m}", emp_sienge[e]
     if d <= corte:
         if g in grupos: real_g[(en, grupos[g], m)] += -valor
@@ -211,7 +249,6 @@ def lancar(r, valor, sufixo_conta=""):
             lid = linha_de(g, "Operacional")
             if lid: real_d[(en, lid, m)] += valor
     if g in grupos:   # todos os meses dos anos do config (o painel cruza tabela x gráfico)
-        situ = "Programado" if d > corte else ("Conciliado" if txt(r[cH]) == "S" else "Não conciliado")
         lanc.append({"data": d.isoformat(), "empreendimento": en, "grupo": grupos[g], "credor": txt(r[cR]),
                      "conta": txt(r[cX]) + sufixo_conta, "titulo": f"{txt(r[cO])}/{txt(r[cP])}".strip("/"),
                      "valor": round(-valor, 2), "situacao": situ})
@@ -220,7 +257,7 @@ for r in rows:
     n_lidas += 1
     if len(r) <= maxc: r = tuple(r) + (None,) * (maxc + 1 - len(r))
     e = txt(r[cL])
-    if e not in emp_sienge or txt(r[cAG]) != "S": continue
+    if (e not in emp_sienge and e not in emp2_sienge) or txt(r[cAG]) != "S": continue
     d = como_data(r[cI])
     if not d or d.year not in anos: continue
     tit = re.sub(r"\.0$", "", txt(r[cO]))
@@ -253,10 +290,19 @@ base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "empreendimentos": list(emp_fluxo.values()), "grupos": list(grupos.values()),
         "serie": serie, "lancamentos": sorted(lanc, key=lambda x: x["data"], reverse=True)}
 so_base = lambda lista: [x for x in lista if x["grupo"] in nomes_base]
+serie2 = [{"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev2[(e, g, m)], 2),
+           "realizado": None if status(m) == "previsto" else round(real2[(e, g, m)], 2), "status": status(m)}
+          for e in emp2_fluxo.values() for g in cats2 for m in meses]
+visao_empresas = {"unidade": "Empresa", "unidades": "Empresas", "empreendimentos": list(emp2_fluxo.values()),
+                  "grupos": cats2, "grupos_base": cats2, "serie": serie2,
+                  "lancamentos": sorted(lanc2, key=lambda x: x["data"], reverse=True), "dre": None}
 pacotes = {"lideres": dict(base, perfil="lideres", grupos=[n for n in grupos.values() if n in nomes_base],
                            grupos_base=nomes_base, serie=so_base(serie), lancamentos=so_base(base["lancamentos"])),
            "completo": dict(base, perfil="completo", grupos_base=nomes_base, dre=dre,
                             dre_estrutura=[{k: v for k, v in l.items() if k in ("id", "nome", "soma", "pai", "antes")} for l in cfg["dre"]])}
+if emp2_fluxo:
+    pacotes["empresas"] = dict(base, perfil="empresas", **visao_empresas)
+    pacotes["completo"]["visoes"] = {"empresas": visao_empresas}       # a Michelle vê as duas visões
 
 # ---------- criptografia ----------
 def ler_senha(nome, rotulo, obrigatoria):
@@ -266,9 +312,11 @@ def ler_senha(nome, rotulo, obrigatoria):
     if s and len(s) < 12: sys.exit(f"A senha em {nome} precisa ter pelo menos 12 caracteres.")
     return s
 senhas = {"lideres": ler_senha("senha.txt", "dos líderes", True),
-          "completo": ler_senha("senha_completo.txt", "completo (Michelle)", False)}
-if senhas["completo"] and senhas["completo"] == senhas["lideres"]:
-    sys.exit("A senha do acesso completo precisa ser diferente da senha dos líderes.")
+          "completo": ler_senha("senha_completo.txt", "completo (Michelle)", False),
+          "empresas": ler_senha("senha_empresas.txt", "empresas", False)}
+_us = [s_ for s_ in senhas.values() if s_]
+if len(_us) != len(set(_us)):
+    sys.exit("As senhas dos acessos (senha.txt, senha_completo.txt e senha_empresas.txt) precisam ser diferentes entre si.")
 pasta_dados = RAIZ / "site" / "data"; pasta_dados.mkdir(parents=True, exist_ok=True)
 b64 = lambda b: base64.b64encode(b).decode("ascii")
 ITER = 600_000
@@ -276,7 +324,7 @@ for perfil, dados in pacotes.items():
     destino = pasta_dados / f"{perfil}.enc.json"
     if not senhas[perfil]:
         if destino.exists(): destino.unlink()
-        print(f"  (acesso {perfil}: sem senha em scripts/senha_completo.txt - não gerado)"); continue
+        print(f"  (acesso {perfil}: sem senha no arquivo de senha - não gerado)"); continue
     salt, iv = os.urandom(16), os.urandom(12)
     chave = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITER).derive(senhas[perfil].encode("utf-8"))
     ct = AESGCM(chave).encrypt(iv, json.dumps(dados, ensure_ascii=False).encode("utf-8"), None)
@@ -292,4 +340,7 @@ print(f"Mês em andamento {corte:%m/%Y} (R$ mil, gasto positivo):")
 for s in serie:
     if s["mes"] == mes_corte and s["grupo"] in nomes_base and (abs(s["previsto"]) + abs(s["realizado"])) > 0.5:
         print(f"  {s['empreendimento']:<26}{s['grupo']:<25} previsto {s['previsto']/1000:9.1f}   realizado {s['realizado']/1000:9.1f}")
-print(f"\nOK: dados gerados em {pasta_dados}  ({len(lanc)} lançamentos)")
+for s in serie2:
+    if s["mes"] == mes_corte and (abs(s["previsto"]) + abs(s["realizado"])) > 0.5:
+        print(f"  {s['empreendimento']:<26}{s['grupo']:<25} previsto {s['previsto']/1000:9.1f}   realizado {s['realizado']/1000:9.1f}")
+print(f"\nOK: dados gerados em {pasta_dados}  ({len(lanc)} lançamentos dos empreendimentos, {len(lanc2)} das empresas)")
