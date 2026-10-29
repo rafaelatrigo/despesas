@@ -22,7 +22,7 @@ Dois acessos, cada um com a sua senha e o seu arquivo criptografado:
 - Completo (scripts/senha_completo.txt) -> site/data/completo.enc.json  : os grupos + "grupos_completo" + a DRE inteira
 Opções:  --se-mudou   só gera se a BASE TEMPLATE, o fluxo ou o corte mudaram (para o agendador)
 """
-import json, sys, datetime, pathlib, os, base64, getpass, fnmatch, hashlib, re
+import json, sys, datetime, pathlib, os, base64, getpass, fnmatch, hashlib, re, unicodedata
 from collections import defaultdict
 try:
     import openpyxl
@@ -93,17 +93,21 @@ if "--se-mudou" in sys.argv:
         print(f"Sem alterações nas bases desde a última publicação ({f1.name} / {f2.name}). Nada a fazer.")
         sys.exit(0)
 
+def gkey(nome):   # "8.2 COMERCIAL", "8.2. Comercial" e "8.2.COMERCIAL" viram a mesma chave
+    t = unicodedata.normalize("NFKD", str(nome or "")).encode("ascii", "ignore").decode().upper()
+    return re.sub(r"[^A-Z0-9]", "", t)
+
 def ordem_dre(g):   # "8.1. STAND" -> 8.1 ; "13. CSC" -> 13
     m = re.match(r"\s*(\d+(?:\.\d+)?)", g["grupo_fechamento"]); return float(m.group(1)) if m else 99
 todos_grupos = sorted(cfg["grupos"] + cfg.get("grupos_completo", []), key=ordem_dre)
-grupos = {g["grupo_fechamento"]: g["nome"] for g in todos_grupos}          # todos (acesso completo)
+grupos = {gkey(g["grupo_fechamento"]): g["nome"] for g in todos_grupos}          # todos (acesso completo)
 nomes_base = [g["nome"] for g in cfg["grupos"]]                              # só os dos líderes
 emp_fluxo = {e["empresa_fluxo"]: e["nome"] for e in cfg["empreendimentos"]}
 emp_sienge = {e["empresa_sienge"]: e["nome"] for e in cfg["empreendimentos"]}
 linhas_dre = [l for l in cfg["dre"] if "soma" not in l]
 def linha_de(grupo, tipo):
     for l in linhas_dre:
-        if l["tipo"] == tipo and (l["grupos"] == "*" or grupo in l["grupos"]): return l["id"]
+        if l["tipo"] == tipo and (l["grupos"] == "*" or grupo in {gkey(x) for x in l["grupos"]}): return l["id"]
     return None
 
 # ---------- PREVISTO: fluxo de caixa mais recente ----------
@@ -121,7 +125,7 @@ prev_g = defaultdict(float)     # (emp, grupo_nome, mes) -> gasto positivo
 prev_d = defaultdict(float)     # (emp, linha_dre, mes) -> valor com sinal (entrada +, saída -)
 tipo_grupo = defaultdict(lambda: defaultdict(int))   # grupo -> tipo (Operacional/Financiamento) visto no fluxo
 for r in rows:
-    e, g, tipo = txt(r[bC]), txt(r[bL]), txt(r[bJ])
+    e, g, tipo = txt(r[bC]), gkey(r[bL]), txt(r[bJ])
     if g and tipo: tipo_grupo[g][tipo] += 1
     if e not in emp_fluxo: continue   # todas as linhas da Base, como as fórmulas das abas DFC
     lid = linha_de(g, tipo)
@@ -165,7 +169,7 @@ if ps.get("meses"):
             if len(r) <= iG or not r[iE]: continue
             e = re.sub(r"^\s*\d+\s*-\s*", "", txt(r[iE]))          # "8 - CAROZZO WELLNESS ..." -> nome do Sienge
             if e not in emp_sienge: continue
-            g = txt(r[iG])
+            g = gkey(r[iG])
             cont = tipo_grupo.get(g)
             tipo = max(cont, key=cont.get) if cont else "Operacional"
             lid = linha_de(g, tipo)
@@ -199,7 +203,7 @@ liq = {(txt(t.get("empresa")), txt(t["titulo"])): t for t in cfg.get("titulos_li
 pend = defaultdict(list)   # (empresa, título, parcela) -> linhas do título
 def lancar(r, valor, sufixo_conta=""):
     e = txt(r[cL]); d = como_data(r[cI])
-    g, tipo, m, en = txt(r[cAP]), txt(r[cAM]), f"{d:%Y-%m}", emp_sienge[e]
+    g, tipo, m, en = gkey(r[cAP]), txt(r[cAM]), f"{d:%Y-%m}", emp_sienge[e]
     if d <= corte:
         if g in grupos: real_g[(en, grupos[g], m)] += -valor
         if tipo == "Financiamento": real_d[(en, "financ", m)] += valor

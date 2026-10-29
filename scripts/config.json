@@ -37,6 +37,10 @@
     {
       "grupo_fechamento": "8.1. STAND DE VENDAS",
       "nome": "Stand de vendas"
+    },
+    {
+      "grupo_fechamento": "8.2 COMERCIAL",
+      "nome": "Comercial"
     }
   ],
   "empreendimentos": [
@@ -186,6 +190,15 @@
       "pai": "despop"
     },
     {
+      "id": "comercial",
+      "nome": "8.2. Comercial",
+      "tipo": "Operacional",
+      "grupos": [
+        "8.2 COMERCIAL"
+      ],
+      "pai": "despop"
+    },
+    {
       "id": "adv",
       "nome": "10. Adv e contador",
       "tipo": "Operacional",
@@ -228,6 +241,7 @@
         "txinc",
         "mkt",
         "stand",
+        "comercial",
         "adv",
         "consult",
         "outras",

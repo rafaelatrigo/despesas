@@ -6,7 +6,7 @@ Painel interno com o previsto x realizado por empreendimento (Wellness, Balena e
 
 | Acesso | Senha (arquivo local, não vai para o GitHub) | O que vê |
 |---|---|---|
-| **Líderes** | `scripts/senha.txt` | Os 8 grupos: 1. Terreno, 2. Custo de obra, 3. Tx adm. obra, 4. Despesas legais, 5. Projetos, 6. IPTU e taxas terreno, 8. Marketing e 8.1. Stand |
+| **Líderes** | `scripts/senha.txt` | Os 9 grupos: 1. Terreno, 2. Custo de obra, 3. Tx adm. obra, 4. Despesas legais, 5. Projetos, 6. IPTU e taxas terreno, 8. Marketing, 8.1. Stand e 8.2. Comercial (premiações e brindes) |
 | **Completo** (Michelle) | `scripts/senha_completo.txt` | Tudo dos líderes **e a DRE inteira** (Receita Bruta até Lucro Líquido) |
 
 - Cada acesso tem o seu próprio arquivo criptografado: `site/data/lideres.enc.json` e `site/data/completo.enc.json`. A DRE **não está** no arquivo dos líderes.
