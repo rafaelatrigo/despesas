@@ -303,6 +303,17 @@ pacotes = {"lideres": dict(base, perfil="lideres", grupos=[n for n in grupos.val
 if emp2_fluxo:
     pacotes["empresas"] = dict(base, perfil="empresas", **visao_empresas)
     pacotes["completo"]["visoes"] = {"empresas": visao_empresas}       # a Michelle vê as duas visões
+# categorias que o acesso completo (Michelle) não vê, nas duas visões: config.json > "completo_ocultar" (a DRE fica inteira)
+ocultar = set(cfg.get("completo_ocultar", []))
+def _sem(pac):
+    pac = dict(pac)
+    for k in ("grupos", "grupos_base"): pac[k] = [g for g in pac[k] if g not in ocultar]
+    for k in ("serie", "lancamentos"): pac[k] = [x for x in pac[k] if x["grupo"] not in ocultar]
+    return pac
+if ocultar:
+    pacotes["completo"] = _sem(pacotes["completo"])
+    if "visoes" in pacotes["completo"]:
+        pacotes["completo"]["visoes"] = {k: _sem(v) for k, v in pacotes["completo"]["visoes"].items()}
 
 # ---------- criptografia ----------
 def ler_senha(nome, rotulo, obrigatoria):

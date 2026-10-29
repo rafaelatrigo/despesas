@@ -389,5 +389,8 @@
       "CSC"
     ],
     "obs": "Só tipo Operacional. Salários PJ: toda conta que contém o texto de conta_contendo, em qualquer grupo. grupos_fora: receitas e rateio do CSC (não são despesa). O resto vai para Demais despesas."
-  }
+  },
+  "completo_ocultar": [
+    "Despesas tributárias"
+  ]
 }
