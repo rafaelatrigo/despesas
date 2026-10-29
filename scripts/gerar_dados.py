@@ -9,9 +9,9 @@ De onde vem cada número:
   do relatório de previstos mais recente (aba Base Fluxo), no lugar do fluxo de caixa.
 - REALIZADO e LANÇAMENTOS: a BASE TEMPLATE BUDGET modificada por último em "pasta_budget",
   aba Realizado, com Considera = S, conciliado S e N, somando VALOR_V3 por DATA CAIXA.
-  - Meses anteriores ao mês do corte: mês fechado, soma o mês inteiro.
-  - Mês do corte: do dia 1 até o corte.
-  - Títulos com data depois do corte aparecem como "Programado" e ficam fora do realizado.
+  - Realizado = CONCILIADO S com data caixa até hoje. "Realizado até" = último dia com título conciliado.
+  - CONCILIADO N (ou data futura) aparece como "Programado" e fica fora do realizado.
+  - Mês vigente: vira na primeira sexta-feira do mês novo.
   - Títulos em "titulos_liquidos" (config.json) entram pelo valor líquido: pagamento menos o desconto
     do próprio título (conta redutora), numa linha só, no grupo e na data do pagamento.
 - CORTE: a sexta-feira mais recente, contando o próprio dia (rodou na sexta = a própria sexta;
@@ -75,10 +75,11 @@ def abrir_mais_recente(pasta, padrao, aba):
 # ---------- corte ----------
 hoje = datetime.date.today()
 if "--data" in sys.argv: hoje = datetime.date.fromisoformat(sys.argv[sys.argv.index("--data") + 1])
-corte = hoje - datetime.timedelta(days=(hoje.weekday() - 4) % 7)   # sexta mais recente (inclui hoje, se for sexta)
-mes_corte = f"{corte:%Y-%m}"
+sexta = hoje - datetime.timedelta(days=(hoje.weekday() - 4) % 7)   # sexta mais recente (inclui hoje, se for sexta)
+mes_corte = f"{sexta:%Y-%m}"     # MÊS VIGENTE: vira na primeira sexta-feira do mês novo
+corte = None                     # REALIZADO ATÉ: último dia com título conciliado (S) na BASE TEMPLATE, limitado a hoje
 _anos = cfg.get("anos", "auto")
-anos = ({corte.year - 1, corte.year, corte.year + 1} if _anos == "auto" else set(_anos))   # auto: ano anterior, vigente e seguinte
+anos = ({sexta.year - 1, sexta.year, sexta.year + 1} if _anos == "auto" else set(_anos))   # auto: ano anterior, vigente e seguinte
 
 # ---------- só roda se algo mudou (modo agendado) ----------
 assinatura_arq = AQUI / ".assinatura"
@@ -88,7 +89,7 @@ if "--se-mudou" in sys.argv:
     _ps = cfg.get("previsto_sistema") or {}
     try: f3 = candidatos(_ps["pasta"], _ps["padrao"])[0] if _ps.get("meses") else None
     except SystemExit: f3 = None
-    assin = hashlib.sha256(json.dumps([f1.name, f1.stat().st_mtime, f2.name, f2.stat().st_mtime, corte.isoformat(),
+    assin = hashlib.sha256(json.dumps([f1.name, f1.stat().st_mtime, f2.name, f2.stat().st_mtime, sexta.isoformat(), hoje.isoformat(),
                                        f3.name if f3 else None, f3.stat().st_mtime if f3 else None,
                                        arq_cfg.read_text(encoding="utf-8-sig")]).encode()).hexdigest()
     if assinatura_arq.exists() and assinatura_arq.read_text().strip() == assin:
@@ -232,17 +233,20 @@ liq = {(txt(t.get("empresa")), txt(t["titulo"])): t for t in cfg.get("titulos_li
 pend = defaultdict(list)   # (empresa, título, parcela) -> linhas do título
 def lancar(r, valor, sufixo_conta=""):
     e = txt(r[cL]); d = como_data(r[cI])
-    situ = "Programado" if d > corte else ("Conciliado" if txt(r[cH]) == "S" else "Não conciliado")
+    global corte
+    realizado = txt(r[cH]) == "S" and d <= hoje          # realizado = conciliado S com data caixa até hoje
+    situ = "Conciliado" if realizado else "Programado"   # conciliado N (ou data futura) = programado
+    if realizado and (corte is None or d > corte): corte = d
     if e in emp2_sienge:     # visão empresas
         c2 = cat_empresa(gkey(r[cAP]), r[cX], txt(r[cAM]))
         if not c2: return
-        if d <= corte: real2[(emp2_sienge[e], c2, f"{d:%Y-%m}")] += -valor
+        if realizado: real2[(emp2_sienge[e], c2, f"{d:%Y-%m}")] += -valor
         lanc2.append({"data": d.isoformat(), "empreendimento": emp2_sienge[e], "grupo": c2, "credor": txt(r[cR]),
                       "conta": txt(r[cX]) + sufixo_conta, "titulo": f"{txt(r[cO])}/{txt(r[cP])}".strip("/"),
                       "valor": round(-valor, 2), "situacao": situ})
         return
     g, tipo, m, en = gkey(r[cAP]), txt(r[cAM]), f"{d:%Y-%m}", emp_sienge[e]
-    if d <= corte:
+    if realizado:
         if g in grupos: real_g[(en, grupos[g], m)] += -valor
         if tipo == "Financiamento": real_d[(en, "financ", m)] += valor
         else:
@@ -276,7 +280,10 @@ print(f"  {n_lidas} linhas lidas")
 
 # ---------- séries ----------
 meses = sorted(mes_cols)
-def status(m): return "fechado" if m < mes_corte else ("em andamento" if m == mes_corte else "previsto")
+if corte is None: corte = sexta
+mes_real = f"{corte:%Y-%m}"
+def status(m):   # fechado: antes do mês vigente; em andamento: mês vigente (e o mês do último conciliado, se já virou); previsto: futuro
+    return "fechado" if m < mes_corte else ("em andamento" if m <= max(mes_corte, mes_real) else "previsto")
 serie = [{"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev_g[(e, g, m)], 2),
           "realizado": None if status(m) == "previsto" else round(real_g[(e, g, m)], 2), "status": status(m)}
          for e in emp_fluxo.values() for g in grupos.values() for m in meses]
@@ -346,8 +353,8 @@ for antigo in ("marketing.enc.json", "marketing.json"):   # formatos antigos / s
 json.dump({"gerado_em": base["gerado_em"]}, open(pasta_dados / "versao.json", "w"))
 if "--se-mudou" in sys.argv: assinatura_arq.write_text(assin)
 
-print(f"\nCorte: {corte:%d/%m/%Y} (sexta mais recente até {hoje:%d/%m/%Y})")
-print(f"Mês em andamento {corte:%m/%Y} (R$ mil, gasto positivo):")
+print(f"\nRealizado até {corte:%d/%m/%Y} (último título conciliado na BASE TEMPLATE, até {hoje:%d/%m/%Y})")
+print(f"Mês vigente {sexta:%m/%Y} (vira na primeira sexta do mês) - R$ mil, gasto positivo:")
 for s in serie:
     if s["mes"] == mes_corte and s["grupo"] in nomes_base and (abs(s["previsto"]) + abs(s["realizado"])) > 0.5:
         print(f"  {s['empreendimento']:<26}{s['grupo']:<25} previsto {s['previsto']/1000:9.1f}   realizado {s['realizado']/1000:9.1f}")

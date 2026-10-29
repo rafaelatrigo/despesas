@@ -191,7 +191,7 @@ details.fbox>summary{display:none}
     </section>
     <section class="card" id="lancCard">
       <h2>Lançamentos</h2>
-      <p class="sub">Títulos da BASE TEMPLATE (Considera = S). Programado = data caixa depois do corte, ainda fora do realizado. A tabela abre no <b>mês vigente</b>; clique em outra barra do gráfico para ver outro mês. Use o ▼ de cada coluna para filtrar: o gráfico acompanha.</p>
+      <p class="sub">Títulos da BASE TEMPLATE (Considera = S). Realizado = conciliado S; Programado = conciliado N (ainda não confirmado no banco), fora do realizado. A tabela abre no <b>mês vigente</b>; clique em outra barra do gráfico para ver outro mês. Use o ▼ de cada coluna para filtrar: o gráfico acompanha.</p>
       <input class="search" id="q" type="search" placeholder="Buscar credor, conta ou título" aria-label="Buscar lançamentos">
       <div class="scroll"><table id="lanc"></table></div>
       <p class="foot"><span id="lancFoot"></span><button class="limpar hidden" id="limparLanc" type="button">Limpar filtros (volta ao mês vigente)</button></p>
@@ -376,11 +376,11 @@ const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
   const V=x=>`${fmtMil(x)}<small>R$ mil</small>`, nProg=prog.filter(l=>l.data.slice(0,7)===m).length;
   $("tiles").innerHTML=`
    <div class="tile" title="Previsto no fluxo de caixa para ${mesNome(m)}"><div class="k">Previsto ${mc(m)}</div><div class="v">${V(prev)}</div><div class="s">fluxo de caixa</div></div>
-   <div class="tile" title="Realizado de 1º/${m.slice(5)} até o corte"><div class="k">Realizado até ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(real)}</div>
+   <div class="tile" title="Títulos conciliados (S) de 1º/${m.slice(5)} até ${fmtD(D.corte)}, último dia conciliado na BASE TEMPLATE"><div class="k">Realizado até ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(real)}</div>
      <div class="s">${pct==null?"sem previsto":(pct*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"% do previsto"}</div>
      <div class="meter" aria-hidden="true"><i style="width:${Math.min(100,(pct||0)*100)}%"></i></div></div>
    <div class="tile" title="Previsto − realizado no mês"><div class="k">${saldo<0?"Acima do previsto":"Saldo a realizar"}</div><div class="v ${saldo<0?"neg":""}">${V(Math.abs(saldo))}</div><div class="s">previsto − realizado</div></div>
-   <div class="tile" title="Títulos com data caixa depois do corte${progTot!==progMes?` · total com meses seguintes: R$ ${fmtMil(progTot)} mil`:""}"><div class="k">Programado após ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(progMes)}</div><div class="s">${nProg} títulos no mês</div></div>
+   <div class="tile" title="Títulos não conciliados (N) com data caixa no mês${progTot!==progMes?` · total com os outros meses: R$ ${fmtMil(progTot)} mil`:""}"><div class="k">Programado (não conciliado)</div><div class="v">${V(progMes)}</div><div class="s">${nProg} títulos no mês</div></div>
    <div class="tile" title="Soma do previsto no fluxo de caixa de todos os meses do período marcado no filtro (${per})"><div class="k">Previsto ${per}</div><div class="v">${V(prevAno)}</div><div class="s">fluxo de caixa · período inteiro</div></div>
    <div class="tile" title="Meses fechados + mês em andamento (até o corte) do período marcado no filtro (${per})"><div class="k">Realizado ${per}</div><div class="v">${V(ano)}</div><div class="s">${alertaAno(ano,prevAno)}</div></div>`;
 }
@@ -391,7 +391,7 @@ function renderChart(){
   $("chTitle").textContent=`Gasto mensal · ${st.emps.length===D.empreendimentos.length?(D.unidade==="Empresa"?"todas as empresas":"todos os empreendimentos"):st.emps.join(", ")}`;
   $("chSub").innerHTML=det
     ? `R$ mil · <b>realizado só dos lançamentos filtrados na tabela</b> (o previsto não se aplica a filtro de credor, conta, título, situação ou valor)`
-    : `R$ mil · meses fechados (cor cheia), mês em andamento até o corte e previsto (tom claro com contorno tracejado) · <b>clique numa barra</b> para ver outro mês na tabela (Ctrl+clique soma meses)`;
+    : `R$ mil · meses fechados (cor cheia), mês em andamento até o último dia conciliado e previsto (tom claro com contorno tracejado) · <b>clique numa barra</b> para ver outro mês na tabela (Ctrl+clique soma meses)`;
   const base=D.grupos_base||D.grupos, extras=gs.filter(g=>!base.includes(g));
   $("legend").innerHTML=gs.filter(g=>base.includes(g)).map(g=>`<span class="lg" data-g="${esc(g)}" title="Clique para ver só ${esc(g)}"><i class="sw" style="background:${cor(g)}"></i>${esc(g)}</span>`).join("")+
     (extras.length?`<span title="${esc(extras.join(", "))}"><i class="sw" style="background:var(--sx)"></i>Demais despesas da DRE (${extras.length})</span>`:"")+
@@ -520,7 +520,7 @@ function renderLanc(){
   const B=baseLanc(), L=B.filter(l=>passa(l,null));
   const c0=COLS.find(c=>c.k===XF.sort.k), kf=c0.num?(l=>l.valor):(l=>String(l[c0.k]??"").toLowerCase());
   L.sort((x,y)=>{const a=kf(x),b=kf(y);return (a<b?-1:a>b?1:0)*XF.sort.dir;});
-  const cls={"Conciliado":"c","Não conciliado":"n","Programado":"p"};
+  const cls={"Conciliado":"c","Programado":"p"};
   const seta=c=>XF.sort.k===c.k?(XF.sort.dir>0?" ↑":" ↓"):"";
   const mostra=L.slice(0,MAX_LINHAS);
   $("lanc").innerHTML=`<thead><tr>${COLS.map(c=>`<th class="${c.num?"":"l"}"><span class="thf">${c.n}${seta(c)}<button type="button" class="fbt ${ativoCol(c)?"on":""}" data-k="${c.k}" aria-label="Filtrar ${c.n}" title="Filtrar e ordenar">${ativoCol(c)?"▼•":"▼"}</button></span></th>`).join("")}</tr></thead><tbody>`+
