@@ -299,6 +299,7 @@ dre = [{"empreendimento": e, "linha": l["id"], "mes": m, "previsto": round(prev_
        for e in emp_fluxo.values() for l in linhas_dre for m in meses]
 base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "data_atualizacao": hoje.isoformat(), "corte": corte.isoformat(), "mes_atual": mes_corte,
+        "mes_inicio_filtro": cfg.get("mes_inicio_filtro"),   # filtro "Mês" do painel começa aqui (config.json)
         "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name,
                    "previsto_sistema": f_prev.name if f_prev else None, "meses_sistema": meses_sist},
         "empreendimentos": list(emp_fluxo.values()), "grupos": nomes_todos,

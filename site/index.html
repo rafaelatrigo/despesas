@@ -517,7 +517,7 @@ const mesPadrao=()=>new Set([MV()]);
 const noPadrao=()=>XF.meses&&XF.meses.size===1&&XF.meses.has(MV());
 function setMes(m){ MSEL=(m&&m!==D.mes_atual)?m:null; XF.meses=mesPadrao(); render(); }
 function renderMesSel(){
-  const ms=[...new Set(D.serie.map(x=>x.mes))].filter(noPer).sort().reverse(), sel=$("fMes");
+  const ini=D.mes_inicio_filtro||"", ms=[...new Set(D.serie.map(x=>x.mes))].filter(x=>noPer(x)&&x>=ini).sort().reverse(), sel=$("fMes");
   if(!ms.includes(MV())) ms.push(MV());
   sel.innerHTML=ms.sort().reverse().map(m=>`<option value="${m}" ${m===MV()?"selected":""}>${mesNome(m)}${m===D.mes_atual?" (vigente)":""}</option>`).join("");
   sel.onchange=()=>setMes(sel.value);
