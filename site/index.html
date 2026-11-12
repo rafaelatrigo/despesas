@@ -57,6 +57,7 @@ aside::-webkit-scrollbar{width:8px} aside::-webkit-scrollbar-thumb{background:va
 aside h3{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
 .fsec{margin-bottom:16px}.fsec:last-child{margin-bottom:0}
 .fgrid{display:flex;flex-direction:column;gap:5px}
+.perrow{display:flex;align-items:center;gap:8px}.perrow span{color:var(--muted);font-size:12.5px}.perrow .fsel{flex:1;min-width:0}
 .fsel{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:7px 10px;font:inherit;font-size:12.5px;cursor:pointer}
 .fbtn{display:flex;width:100%;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;font:inherit;font-size:12.5px;cursor:pointer;line-height:1.3;text-align:left}
 .fbtn:hover{border-color:var(--brand)}
@@ -181,7 +182,7 @@ details.fbox>summary{display:none}
       <div class="fsec hidden" id="secVis"><h3>Visão</h3><div id="fVis"></div></div>
       <div class="fsec"><h3 id="hEmp">Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Despesas</h3><div id="fGrp"></div></div>
-      <div class="fsec"><h3>Período</h3><div id="fAno"></div></div>
+      <div class="fsec"><h3>Período</h3><div class="perrow"><select id="fAnoDe" class="fsel" aria-label="Ano inicial"></select><span>até</span><select id="fAnoAte" class="fsel" aria-label="Ano final"></select></div></div>
       <div class="fsec"><h3>Mês</h3><select id="fMes" class="fsel" aria-label="Mês dos quadros, da tabela e da DRE"></select></div>
     </details>
   </aside>
@@ -306,7 +307,7 @@ try{const s=sessionStorage.getItem("desp-senha"); if(s) entrar(s,true);}catch(e)
 if(!window.crypto||!crypto.subtle) msg.textContent="Abra o painel pelo endereço https do GitHub Pages.";
 
 /* ---------- filtros ---------- */
-const ANOS=()=>[...new Set(D.serie.map(s=>s.mes.slice(0,4)))].sort();
+const ANOS=()=>(D.anos_filtro&&D.anos_filtro.length?D.anos_filtro:[...new Set(D.serie.map(s=>s.mes.slice(0,4)))]).slice().sort();
 const cor=g=>{const i=(D.grupos_base||D.grupos).indexOf(g); return i>=0?`var(--s${i+1})`:"var(--sx)";};
 const okE=e=>st.emps.includes(e), okG=g=>st.grps.includes(g);
 /* período = anos marcados no filtro "Período do gráfico" (quadros, tabela e DRE acumulam por ele) */
@@ -335,7 +336,15 @@ function init(){
   const fix=(k,all)=>{ if(!Array.isArray(st[k])) st[k]=[...all]; st[k]=all.filter(x=>st[k].includes(x)); if(!st[k].length) st[k]=[...all]; };
   fix("emps",D.empreendimentos); fix("grps",D.grupos);
   const anoAt=D.mes_atual.slice(0,4);                                              // padrão: todos os anos (ano anterior, atual e seguinte)
-  if(st.v!==2||!Array.isArray(st.anos)||!st.anos.includes(anoAt)){ st.anos=ANOS(); st.v=2; } fix("anos",ANOS());
+  /* Período: de/até (um ano ou vários). Padrão: ano anterior até o seguinte */
+  const AN=ANOS(), faixa=(a,b)=>AN.filter(x=>x>=a&&x<=b);
+  if(st.v!==3||!Array.isArray(st.anos)||!st.anos.length||!st.anos.every(x=>AN.includes(x))){ st.anos=faixa(String(+anoAt-1),String(+anoAt+1)); st.v=3; }
+  if(!st.anos.length) st.anos=[anoAt];
+  const opt=(sel,v)=>{sel.innerHTML=AN.map(a=>`<option value="${a}" ${a===v?"selected":""}>${a}</option>`).join("");};
+  const de=$("fAnoDe"), ate=$("fAnoAte"), srt=[...st.anos].sort(); opt(de,srt[0]); opt(ate,srt[srt.length-1]);
+  const mudaPer=quem=>{ let a=de.value,b=ate.value; if(a>b){ if(quem==="de") b=a; else a=b; de.value=a; ate.value=b; }
+    st.anos=faixa(a,b); if(MSEL&&!noPer(MSEL)) MSEL=null; salvar(); XF.meses=mesPadrao(); render(); };
+  de.onchange=()=>mudaPer("de"); ate.onchange=()=>mudaPer("ate");
   $("stamp").innerHTML=`Dados de ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}<br>Realizado até ${fmtD(D.corte)}`;
   $("perfil").textContent={completo:"Acesso completo",empresas:"Acesso empresas"}[RAW.perfil]||"Acesso líderes";
   const vis=RAW.visoes?["empreendimentos","empresas"].filter(k=>k==="empreendimentos"||RAW.visoes[k]):[];
@@ -347,7 +356,6 @@ function init(){
   $("hsub").textContent=`Previsto x realizado por ${UN().toLowerCase()} · uso interno`;
   lista("fEmp","emps",D.empreendimentos,"Todos");
   lista("fGrp","grps",D.grupos,"Todas",cor);
-  lista("fAno","anos",ANOS(),"Todos");
   if(window.matchMedia("(max-width:900px)").matches) $("fbox").open=false;
   $("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base)${D.fontes.previsto_sistema?`; ${(D.fontes.meses_sistema||[]).map(mesNome).join(" e ")} pelo previsto do sistema (${D.fontes.previsto_sistema})`:""}. Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S, por data caixa; conciliado N aparece como programado). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
   if(D.dre) $("tiles").after($("dreCard"));   /* acesso completo: DRE logo abaixo dos quadros */

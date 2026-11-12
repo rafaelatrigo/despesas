@@ -79,7 +79,9 @@ sexta = hoje - datetime.timedelta(days=(hoje.weekday() - 4) % 7)   # sexta mais 
 mes_corte = f"{sexta:%Y-%m}"     # MÊS VIGENTE: vira na primeira sexta-feira do mês novo
 corte = None                     # REALIZADO ATÉ: último dia com título conciliado (S) na BASE TEMPLATE, limitado a hoje
 _anos = cfg.get("anos", "auto")
-anos = ({sexta.year - 1, sexta.year, sexta.year + 1} if _anos == "auto" else set(_anos))   # auto: ano anterior, vigente e seguinte
+if _anos == "auto": anos = {sexta.year - 1, sexta.year, sexta.year + 1}          # auto: ano anterior, vigente e seguinte
+elif isinstance(_anos, dict): anos = set(range(int(_anos["de"]), int(_anos["ate"]) + 1))   # {"de": 2020, "ate": 2030}
+else: anos = set(_anos)
 
 # ---------- só roda se algo mudou (modo agendado) ----------
 assinatura_arq = AQUI / ".assinatura"
@@ -299,7 +301,8 @@ dre = [{"empreendimento": e, "linha": l["id"], "mes": m, "previsto": round(prev_
        for e in emp_fluxo.values() for l in linhas_dre for m in meses]
 base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "data_atualizacao": hoje.isoformat(), "corte": corte.isoformat(), "mes_atual": mes_corte,
-        "mes_inicio_filtro": cfg.get("mes_inicio_filtro"),   # filtro "Mês" do painel começa aqui (config.json)
+        "mes_inicio_filtro": cfg.get("mes_inicio_filtro"),
+        "anos_filtro": [str(a) for a in sorted(anos)],          # anos do filtro Período (config.json > "anos")   # filtro "Mês" do painel começa aqui (config.json)
         "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name,
                    "previsto_sistema": f_prev.name if f_prev else None, "meses_sistema": meses_sist},
         "empreendimentos": list(emp_fluxo.values()), "grupos": nomes_todos,
