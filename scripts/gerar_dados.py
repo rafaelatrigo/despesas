@@ -146,6 +146,7 @@ for c in ("Nome empresa", "Tipo análise", "Tipo", "GRUPO FECHAMENTO"):
 bC, bB, bJ, bL = bix["Nome empresa"], bix["Tipo análise"], bix["Tipo"], bix["GRUPO FECHAMENTO"]
 bK = bix.get("Conta")
 prev2 = defaultdict(float)      # visão empresas: (empresa, categoria, mes) -> gasto positivo
+pj_base = defaultdict(float)    # Salários PJ da aba Base: (empresa, categoria do grupo onde está, mes) -> gasto positivo
 prev_g = defaultdict(float)     # (emp, grupo_nome, mes) -> gasto positivo
 prev_d = defaultdict(float)     # (emp, linha_dre, mes) -> valor com sinal (entrada +, saída -)
 tipo_grupo = defaultdict(lambda: defaultdict(int))   # grupo -> tipo (Operacional/Financiamento) visto no fluxo
@@ -155,9 +156,12 @@ for r in rows:
     if e in emp2_fluxo:
         c2 = cat_empresa(g, r[bK] if bK is not None else "", tipo)
         if c2:
+            c_grp = cat_empresa(g, "", tipo)       # categoria do grupo, sem separar o PJ
             for m, i in mes_cols.items():
                 v = num(r[i])
-                if v: prev2[(emp2_fluxo[e], c2, m)] += -v
+                if v:
+                    prev2[(emp2_fluxo[e], c2, m)] += -v
+                    if pj2 and c2 == pj2["nome"] and c_grp: pj_base[(emp2_fluxo[e], c_grp, m)] += -v
         continue
     if e not in emp_fluxo: continue   # todas as linhas da Base, como as fórmulas das abas DFC
     lid = linha_de(g, tipo)
@@ -166,6 +170,48 @@ for r in rows:
         if not v: continue
         if g in grupos and tipo == "Operacional": prev_g[(emp_fluxo[e], grupos[g], m)] += -v
         if lid: prev_d[(emp_fluxo[e], lid, m)] += v
+
+# ---------- PREVISTO PELAS ABAS DFC (config.json > "previsto_fonte": "dfc") ----------
+# Cada empreendimento/empresa lê a sua aba DFC (campo "aba_dfc"): linhas com Tipo (col. B) e GRUPO FECHAMENTO (col. E),
+# colunas de mês da linha de cabeçalho. Assim entram também os ajustes digitados direto nas abas DFC.
+fonte_prev = cfg.get("previsto_fonte", "base")
+abas_dfc = []
+def ler_dfc(aba):
+    if aba not in wb.sheetnames: sys.exit(f"Aba '{aba}' não encontrada em {f_fluxo.name} (config.json > aba_dfc)")
+    linhas = list(wb[aba].iter_rows(values_only=True)); cab_i = None
+    for k, r in enumerate(linhas[:40]):
+        if len(r) > 4 and txt(r[4]).upper() == "GRUPO FECHAMENTO": cab_i = k; break
+    if cab_i is None: sys.exit(f"Cabeçalho 'GRUPO FECHAMENTO' (coluna E) não encontrado na aba {aba}")
+    cols = {f"{d:%Y-%m}": i for i, h in enumerate(linhas[cab_i]) if isinstance(h, (datetime.datetime, datetime.date))
+            and (d := como_data(h)) and d.year in anos}
+    for r in linhas[cab_i + 1:]:
+        if len(r) > 4 and txt(r[4]).upper() == "SALDO FINAL": break
+        tipo, g = txt(r[1] if len(r) > 1 else ""), gkey(r[4] if len(r) > 4 else "")
+        if tipo in ("Operacional", "Investimento", "Financiamento") and g:
+            yield tipo, txt(r[2]), g, {m: num(r[i]) for m, i in cols.items() if i < len(r) and num(r[i])}
+if fonte_prev == "dfc":
+    prev_g.clear(); prev_d.clear()
+    for e in cfg["empreendimentos"]:
+        abas_dfc.append(e["aba_dfc"])
+        for tipo, _cl, g, vals in ler_dfc(e["aba_dfc"]):
+            lid = linha_de(g, tipo)
+            for m, v in vals.items():
+                if g in grupos and tipo == "Operacional": prev_g[(e["nome"], grupos[g], m)] += -v
+                if lid: prev_d[(e["nome"], lid, m)] += v
+    if CE.get("empresas"):
+        prev2.clear()
+        for e in CE["empresas"]:
+            abas_dfc.append(e["aba_dfc"])
+            for tipo, cl, g, vals in ler_dfc(e["aba_dfc"]):
+                c2 = cat_empresa(g, "", tipo) if cl == "Saídas" else None    # visão empresas: só despesas (Classificação = Saídas)
+                if c2:
+                    for m, v in vals.items(): prev2[(e["nome"], c2, m)] += -v
+        # Salários PJ: a aba DFC não abre por conta. O valor vem da Base (conta "Salarios PJ") e sai do grupo onde ele está,
+        # então o total de cada empresa continua igual ao da aba DFC.
+        for (en, c_grp, m), v in pj_base.items():
+            if m in mes_cols:
+                prev2[(en, c_grp, m)] -= v; prev2[(en, pj2["nome"], m)] += v
+    print(f"  Previsto pelas abas DFC: {', '.join(abas_dfc)}")
 wb.close()
 
 # ---------- PREVISTO DO SISTEMA (relatório de previstos) para os meses definidos em config ----------
@@ -303,7 +349,7 @@ base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "data_atualizacao": hoje.isoformat(), "corte": corte.isoformat(), "mes_atual": mes_corte,
         "mes_inicio_filtro": cfg.get("mes_inicio_filtro"),
         "anos_filtro": [str(a) for a in sorted(anos)],          # anos do filtro Período (config.json > "anos")   # filtro "Mês" do painel começa aqui (config.json)
-        "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name,
+        "fontes": {"previsto": f_fluxo.name, "previsto_abas": abas_dfc, "realizado": f_budget.name,
                    "previsto_sistema": f_prev.name if f_prev else None, "meses_sistema": meses_sist},
         "empreendimentos": list(emp_fluxo.values()), "grupos": nomes_todos,
         "serie": serie, "lancamentos": sorted(lanc, key=lambda x: x["data"], reverse=True)}

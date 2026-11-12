@@ -47,17 +47,20 @@
     {
       "nome": "Carozzo Wellness",
       "empresa_fluxo": "CAROZZO WELLNESS",
-      "empresa_sienge": "CAROZZO WELLNESS JARDIM ARMAÇÃO LTDA"
+      "empresa_sienge": "CAROZZO WELLNESS JARDIM ARMAÇÃO LTDA",
+      "aba_dfc": "DFC CAROZZO WELLNESS"
     },
     {
       "nome": "Terrazza Balena",
       "empresa_fluxo": "TERRAZZA BALENA SPE LTDA",
-      "empresa_sienge": "TERRAZZA BALENA SPE LTDA"
+      "empresa_sienge": "TERRAZZA BALENA SPE LTDA",
+      "aba_dfc": "DFC BALENA"
     },
     {
       "nome": "Ícone Connected (Feira)",
       "empresa_fluxo": "TERRAZZA FEIRA SPE LTDA",
-      "empresa_sienge": "TERRAZZA FEIRA SPE LTDA"
+      "empresa_sienge": "TERRAZZA FEIRA SPE LTDA",
+      "aba_dfc": "DFC ICONE"
     }
   ],
   "anos": {
@@ -337,12 +340,14 @@
       {
         "nome": "Carozzo Desenvolvimento",
         "empresa_fluxo": "CAROZZO DESENVOLVIMENTO IMOBILIARIO LTDA",
-        "empresa_sienge": "CAROZZO DESENVOLVIMENTO IMOBILIARIO LTDA"
+        "empresa_sienge": "CAROZZO DESENVOLVIMENTO IMOBILIARIO LTDA",
+        "aba_dfc": "DFC CAROZZO"
       },
       {
         "nome": "Altamente Rentável",
         "empresa_fluxo": "ALTAMENTE RENTAVEL IMOBILIARIA DIGITAL LTDA",
-        "empresa_sienge": "ALTAMENTE RENTAVEL IMOBILIARIA DIGITAL LTDA"
+        "empresa_sienge": "ALTAMENTE RENTAVEL IMOBILIARIA DIGITAL LTDA",
+        "aba_dfc": "DFC AR"
       }
     ],
     "salarios_pj": {
@@ -411,5 +416,6 @@
       "obs": "Pago pela Carozzo DI, mas é despesa do Wellness"
     }
   ],
-  "mes_inicio_filtro": "2026-10"
+  "mes_inicio_filtro": "2026-10",
+  "previsto_fonte": "dfc"
 }

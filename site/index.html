@@ -357,7 +357,7 @@ function init(){
   lista("fEmp","emps",D.empreendimentos,"Todos");
   lista("fGrp","grps",D.grupos,"Todas",cor);
   if(window.matchMedia("(max-width:900px)").matches) $("fbox").open=false;
-  $("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base)${D.fontes.previsto_sistema?`; ${(D.fontes.meses_sistema||[]).map(mesNome).join(" e ")} pelo previsto do sistema (${D.fontes.previsto_sistema})`:""}. Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S, por data caixa; conciliado N aparece como programado). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
+  $("fontes").textContent=`Previsto: ${D.fontes.previsto} (${D.fontes.previsto_abas&&D.fontes.previsto_abas.length?"abas "+D.fontes.previsto_abas.join(", "):"aba Base"})${D.fontes.previsto_sistema?`; ${(D.fontes.meses_sistema||[]).map(mesNome).join(" e ")} pelo previsto do sistema (${D.fontes.previsto_sistema})`:""}. Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S, por data caixa; conciliado N aparece como programado). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
   if(D.dre) $("tiles").after($("dreCard"));   /* acesso completo: DRE logo abaixo dos quadros */
   MSEL=null; XF.meses=mesPadrao();
   if(TOQUE) $("dica").textContent="Toque para filtrar. Toque em mais de um para combinar.";
