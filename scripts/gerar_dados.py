@@ -175,7 +175,7 @@ for r in rows:
 # Cada empreendimento/empresa lê a sua aba DFC (campo "aba_dfc"): linhas com Tipo (col. B) e GRUPO FECHAMENTO (col. E),
 # colunas de mês da linha de cabeçalho. Assim entram também os ajustes digitados direto nas abas DFC.
 fonte_prev = cfg.get("previsto_fonte", "base")
-abas_dfc = []
+abas_dfc, meses_anuais = [], set()
 def ler_dfc(aba):
     if aba not in wb.sheetnames: sys.exit(f"Aba '{aba}' não encontrada em {f_fluxo.name} (config.json > aba_dfc)")
     linhas = list(wb[aba].iter_rows(values_only=True)); cab_i = None
@@ -184,6 +184,13 @@ def ler_dfc(aba):
     if cab_i is None: sys.exit(f"Cabeçalho 'GRUPO FECHAMENTO' (coluna E) não encontrado na aba {aba}")
     cols = {f"{d:%Y-%m}": i for i, h in enumerate(linhas[cab_i]) if isinstance(h, (datetime.datetime, datetime.date))
             and (d := como_data(h)) and d.year in anos}
+    # anos sem coluna por mês (ex.: 2020 a 2024 = colunas anuais): entram como "AAAA-AN", o total do ano
+    anos_mensais = {int(m[:4]) for m in cols}
+    prim_mes = min(cols.values(), default=10**6)        # colunas anuais ficam antes da 1ª coluna de mês
+    for i, h in enumerate(linhas[cab_i]):
+        if isinstance(h, (int, float)) and not isinstance(h, bool) and 2000 <= h <= 2100 and int(h) in anos \
+                and int(h) not in anos_mensais and i < prim_mes:
+            cols[f"{int(h)}-AN"] = i; meses_anuais.add(f"{int(h)}-AN")
     for r in linhas[cab_i + 1:]:
         if len(r) > 4 and txt(r[4]).upper() == "SALDO FINAL": break
         tipo, g = txt(r[1] if len(r) > 1 else ""), gkey(r[4] if len(r) > 4 else "")
@@ -334,16 +341,17 @@ wb.close()
 print(f"  {n_lidas} linhas lidas")
 
 # ---------- séries ----------
-meses = sorted(mes_cols)
+meses = sorted(set(mes_cols) | meses_anuais)     # meses da Base + anos fechados das colunas anuais do DFC
 if corte is None: corte = sexta
 mes_real = f"{corte:%Y-%m}"
-def status(m):   # fechado: antes do mês vigente; em andamento: mês vigente (e o mês do último conciliado, se já virou); previsto: futuro
+def status(m):   # anual: coluna anual do DFC (sem realizado); fechado: antes do mês vigente; em andamento: mês vigente; previsto: futuro
+    if m.endswith("-AN"): return "anual"
     return "fechado" if m < mes_corte else ("em andamento" if m <= max(mes_corte, mes_real) else "previsto")
 serie = [{"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev_g[(e, g, m)], 2),
-          "realizado": None if status(m) == "previsto" else round(real_g[(e, g, m)], 2), "status": status(m)}
+          "realizado": None if status(m) in ("previsto", "anual") else round(real_g[(e, g, m)], 2), "status": status(m)}
          for e in emp_fluxo.values() for g in nomes_todos for m in meses]
 dre = [{"empreendimento": e, "linha": l["id"], "mes": m, "previsto": round(prev_d[(e, l["id"], m)], 2),
-        "realizado": None if status(m) == "previsto" else round(real_d[(e, l["id"], m)], 2), "status": status(m)}
+        "realizado": None if status(m) in ("previsto", "anual") else round(real_d[(e, l["id"], m)], 2), "status": status(m)}
        for e in emp_fluxo.values() for l in linhas_dre for m in meses]
 base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "data_atualizacao": hoje.isoformat(), "corte": corte.isoformat(), "mes_atual": mes_corte,
@@ -355,7 +363,7 @@ base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "serie": serie, "lancamentos": sorted(lanc, key=lambda x: x["data"], reverse=True)}
 so_base = lambda lista: [x for x in lista if x["grupo"] in nomes_base]
 serie2 = [{"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev2[(e, g, m)], 2),
-           "realizado": None if status(m) == "previsto" else round(real2[(e, g, m)], 2), "status": status(m)}
+           "realizado": None if status(m) in ("previsto", "anual") else round(real2[(e, g, m)], 2), "status": status(m)}
           for e in emp2_fluxo.values() for g in cats2 for m in meses]
 visao_empresas = {"unidade": "Empresa", "unidades": "Empresas", "empreendimentos": list(emp2_fluxo.values()),
                   "grupos": cats2, "grupos_base": cats2, "serie": serie2,
