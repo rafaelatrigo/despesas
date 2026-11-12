@@ -57,6 +57,7 @@ aside::-webkit-scrollbar{width:8px} aside::-webkit-scrollbar-thumb{background:va
 aside h3{margin:0 0 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
 .fsec{margin-bottom:16px}.fsec:last-child{margin-bottom:0}
 .fgrid{display:flex;flex-direction:column;gap:5px}
+.fsel{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:7px 10px;font:inherit;font-size:12.5px;cursor:pointer}
 .fbtn{display:flex;width:100%;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;font:inherit;font-size:12.5px;cursor:pointer;line-height:1.3;text-align:left}
 .fbtn:hover{border-color:var(--brand)}
 .fbtn[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
@@ -181,6 +182,7 @@ details.fbox>summary{display:none}
       <div class="fsec"><h3 id="hEmp">Empreendimentos</h3><div id="fEmp"></div></div>
       <div class="fsec"><h3>Despesas</h3><div id="fGrp"></div></div>
       <div class="fsec"><h3>Período</h3><div id="fAno"></div></div>
+      <div class="fsec"><h3>Mês</h3><select id="fMes" class="fsel" aria-label="Mês dos quadros, da tabela e da DRE"></select></div>
     </details>
   </aside>
   <main>
@@ -193,7 +195,7 @@ details.fbox>summary{display:none}
     </section>
     <section class="card" id="lancCard">
       <h2>Lançamentos</h2>
-      <p class="sub">Títulos da BASE TEMPLATE (Considera = S). Realizado = conciliado S; Programado = conciliado N (ainda não confirmado no banco), fora do realizado. A tabela abre no <b>mês vigente</b>; clique em outra barra do gráfico para ver outro mês. Use o ▼ de cada coluna para filtrar: o gráfico acompanha.</p>
+      <p class="sub">Títulos da BASE TEMPLATE (Considera = S). Realizado = conciliado S; Programado = conciliado N (ainda não confirmado no banco), fora do realizado. Abre no <b>mês vigente</b>; troque o mês no filtro <b>Mês</b> ou clicando numa barra do gráfico. Use o ▼ de cada coluna para filtrar: o gráfico acompanha.</p>
       <input class="search" id="q" type="search" placeholder="Buscar credor, conta ou título" aria-label="Buscar lançamentos">
       <div class="scroll"><table id="lanc"></table></div>
       <p class="foot"><span id="lancFoot"></span><button class="limpar hidden" id="limparLanc" type="button">Limpar filtros (volta ao mês vigente)</button></p>
@@ -347,16 +349,16 @@ function init(){
   lista("fGrp","grps",D.grupos,"Todas",cor);
   lista("fAno","anos",ANOS(),"Todos");
   if(window.matchMedia("(max-width:900px)").matches) $("fbox").open=false;
-  $("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base)${D.fontes.previsto_sistema?`; ${(D.fontes.meses_sistema||[]).map(mesNome).join(" e ")} pelo previsto do sistema (${D.fontes.previsto_sistema})`:""}. Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S e N, por data caixa). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
+  $("fontes").textContent=`Previsto: ${D.fontes.previsto} (aba Base)${D.fontes.previsto_sistema?`; ${(D.fontes.meses_sistema||[]).map(mesNome).join(" e ")} pelo previsto do sistema (${D.fontes.previsto_sistema})`:""}. Realizado: ${D.fontes.realizado} (aba Realizado, Considera = S, conciliado S, por data caixa; conciliado N aparece como programado). Dados criptografados; gerados em ${fmtD(D.gerado_em)} ${D.gerado_em.slice(11,16)}.`;
   if(D.dre) $("tiles").after($("dreCard"));   /* acesso completo: DRE logo abaixo dos quadros */
-  XF.meses=mesPadrao();
+  MSEL=null; XF.meses=mesPadrao();
   if(TOQUE) $("dica").textContent="Toque para filtrar. Toque em mais de um para combinar.";
   $("q").oninput=renderLanc;
   render();
 }
 window.addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>D&&renderChart(),120)});
 function soma(f,c){return D.serie.filter(s=>okE(s.empreendimento)&&okG(s.grupo)&&f(s)).reduce((a,s)=>a+(s[c]||0),0)}
-function render(){renderTiles();renderChart();renderTable();renderDRE();renderLanc()}
+function render(){renderMesSel();renderTiles();renderChart();renderTable();renderDRE();renderLanc()}
 
 /* ---------- quadros ---------- */
 /* % do realizado sobre o previsto do ano: até 90% cor padrão, acima de 90% amarelo, acima de 100% vermelho (sempre com ícone + texto) */
@@ -368,7 +370,7 @@ function alertaAno(real,prev){
   return `${n} do previsto do período`;
 }
 function renderTiles(){
-  const m=D.mes_atual, y=m.slice(0,4), prox=[...new Set(D.serie.map(s=>s.mes))].filter(x=>x>m).sort()[0];
+  const m=MV(), y=m.slice(0,4), prox=[...new Set(D.serie.map(s=>s.mes))].filter(x=>x>m).sort()[0];
   const prev=soma(s=>s.mes===m,"previsto"), real=soma(s=>s.mes===m,"realizado"), saldo=prev-real, pct=prev?real/prev:null;
   const ano=soma(s=>noPer(s.mes)&&s.status!=="previsto","realizado"), per=rotPer();
   const pProx=prox?soma(s=>s.mes===prox,"previsto"):0, prevAno=soma(s=>noPer(s.mes),"previsto");
@@ -378,7 +380,7 @@ const mc=x=>{const[yy,mm]=x.split("-");return MESES[+mm-1]+"/"+yy.slice(2)};
   const V=x=>`${fmtMil(x)}<small>R$ mil</small>`, nProg=prog.filter(l=>l.data.slice(0,7)===m).length;
   $("tiles").innerHTML=`
    <div class="tile" title="Previsto no fluxo de caixa para ${mesNome(m)}"><div class="k">Previsto ${mc(m)}</div><div class="v">${V(prev)}</div><div class="s">fluxo de caixa</div></div>
-   <div class="tile" title="Títulos conciliados (S) de 1º/${m.slice(5)} até ${fmtD(D.corte)}, último dia conciliado na BASE TEMPLATE"><div class="k">Realizado até ${fmtD(D.corte).slice(0,5)}</div><div class="v">${V(real)}</div>
+   <div class="tile" title="Títulos conciliados (S) com data caixa em ${mesNome(m)}${m===D.corte.slice(0,7)?` até ${fmtD(D.corte)}, último dia conciliado na BASE TEMPLATE`:""}"><div class="k">${rotReal(m,true)}</div><div class="v">${V(real)}</div>
      <div class="s">${pct==null?"sem previsto":(pct*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"% do previsto"}</div>
      <div class="meter" aria-hidden="true"><i style="width:${Math.min(100,(pct||0)*100)}%"></i></div></div>
    <div class="tile" title="Previsto − realizado no mês"><div class="k">${saldo<0?"Acima do previsto":"Saldo a realizar"}</div><div class="v ${saldo<0?"neg":""}">${V(Math.abs(saldo))}</div><div class="s">previsto − realizado</div></div>
@@ -398,10 +400,10 @@ function renderChart(){
   $("legend").innerHTML=gs.filter(g=>base.includes(g)).map(g=>`<span class="lg" data-g="${esc(g)}" title="Clique para ver só ${esc(g)}"><i class="sw" style="background:${cor(g)}"></i>${esc(g)}</span>`).join("")+
     (extras.length?`<span title="${esc(extras.join(", "))}"><i class="sw" style="background:var(--sx)"></i>Demais despesas da DRE (${extras.length})</span>`:"")+
     (det?`<span><i class="sw light" style="background:var(--text-2)"></i>Programado (tom claro)</span>`:`<span><i class="sw out"></i>Previsto</span>`)+
-    (!noPadrao()?`<span><button type="button" class="limpar" id="limparMes" style="margin:0">Voltar ao mês vigente (${mesCurto(D.mes_atual)})</button></span>`:"");
+    ((!noPadrao()||MSEL)?`<span><button type="button" class="limpar" id="limparMes" style="margin:0">Voltar ao mês vigente (${mesCurto(D.mes_atual)})</button></span>`:"");
   $("legend").querySelectorAll(".lg").forEach(el=>el.onclick=()=>{const g=el.dataset.g;
     st.grps=(st.grps.length===1&&st.grps[0]===g)?[...D.grupos]:[g]; salvar(); lista("fGrp","grps",D.grupos,"Todas",cor); render();});
-  if($("limparMes")) $("limparMes").onclick=()=>{XF.meses=mesPadrao(); renderChart(); renderLanc();};
+  if($("limparMes")) $("limparMes").onclick=()=>setMes(null);
   const meses=[...new Set(D.serie.map(s=>s.mes))].filter(m=>st.anos.includes(m.slice(0,4))).sort();
   let rows;
   if(det){
@@ -431,17 +433,19 @@ function renderChart(){
   if(iAt>=0){const bx=mg.l+bw*iAt, cxA=bx+bw/2, lbl="mês vigente", tx=Math.min(W-mg.r-34,Math.max(mg.l+34,cxA));
     s+=`<rect x="${bx+1}" y="${mg.t}" width="${Math.max(2,bw-2)}" height="${ih}" rx="6" fill="var(--cobre)" fill-opacity=".13" stroke="var(--cobre)" stroke-opacity=".7" stroke-width="1.2"/>`+
        `<text x="${tx}" y="${mg.t-8}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--cobre)">${lbl} · ${mesNome(D.mes_atual).toLowerCase()}</text>`;}
+  const iSel=MSEL?rows.findIndex(o=>o.mes===MSEL):-1;
+  if(iSel>=0){const bx=mg.l+bw*iSel; s+=`<rect x="${bx+1}" y="${mg.t}" width="${Math.max(2,bw-2)}" height="${ih}" rx="6" fill="var(--text)" fill-opacity=".06" stroke="var(--text-2)" stroke-dasharray="4 3" stroke-width="1.2"/>`;}
   rows.forEach((o,i)=>{const cx=mg.l+bw*i+bw/2, x0=cx-w/2, padrao=noPadrao(), dim=XF.meses&&!padrao&&!XF.meses.has(o.mes)?.22:1, sel=XF.meses&&!padrao&&XF.meses.has(o.mes);
     if(sel&&i!==iAt) s+=`<rect x="${mg.l+bw*i+1}" y="${mg.t}" width="${bw-2}" height="${ih}" rx="6" fill="var(--brand-2)"/>`;
     if(o.status==="previsto") pilha(o,"p",x0,.42*dim); else { pilha(o,"r",x0,dim); if(o.prog>0) pilha(o,"pr",x0,.38*dim,o.real); }
     if(!det&&o.status!=="fechado"&&o.prev>0) s+=`<rect x="${x0+1}" y="${y(o.prev)}" width="${w-2}" height="${Math.max(0,y(0)-y(o.prev))}" rx="4" fill="none" stroke="var(--text-2)" stroke-opacity="${dim}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
-    if(i===iAt||(i%labelEvery===0&&(iAt<0||Math.abs(i-iAt)>=labelEvery))) s+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11" fill="${o.mes===D.mes_atual?"var(--cobre)":(sel?"var(--text)":"var(--muted)")}" ${o.mes===D.mes_atual||sel?'font-weight="700"':""}>${mesCurto(o.mes)}</text>`;
+    if(i===iAt||i===iSel||(i%labelEvery===0&&(iAt<0||Math.abs(i-iAt)>=labelEvery)&&(iSel<0||Math.abs(i-iSel)>=labelEvery))) s+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11" fill="${o.mes===D.mes_atual?"var(--cobre)":(sel||i===iSel?"var(--text)":"var(--muted)")}" ${o.mes===D.mes_atual||sel||i===iSel?'font-weight="700"':""}>${mesCurto(o.mes)}</text>`;
     s+=`<rect class="hit" data-i="${i}" x="${mg.l+bw*i}" y="${mg.t}" width="${bw}" height="${ih}" fill="transparent" style="cursor:pointer"/>`;});
   s+=`<line x1="${mg.l}" x2="${W-mg.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--text-2)"/></svg>`;
   box.innerHTML=s; box.appendChild(tip);
   box.querySelectorAll(".hit").forEach(h=>{
     h.addEventListener("click",ev=>{const m=rows[+h.dataset.i].mes, multi=ev.ctrlKey||ev.metaKey||TOQUE;
-      if(!multi) XF.meses=(XF.meses&&XF.meses.size===1&&XF.meses.has(m))?mesPadrao():new Set([m]);
+      if(!multi){ if(XF.meses&&XF.meses.size===1&&XF.meses.has(m)&&m!==D.mes_atual) return setMes(null); return setMes(m); }
       else if(!XF.meses) XF.meses=new Set([m]); else if(XF.meses.has(m)){XF.meses.delete(m); if(!XF.meses.size) XF.meses=mesPadrao();} else XF.meses.add(m);
       tip.style.display="none"; renderChart(); renderLanc();});
     h.addEventListener("mousemove",ev=>{const o=rows[+h.dataset.i], pv=o.status==="previsto";
@@ -450,7 +454,7 @@ function renderChart(){
         (o.status!=="previsto"?`<div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:4px"><span>Realizado total</span><span>${fmtMil(o.real)}</span></div>`:"")+
         (o.prog?`<div class="r"><span>Programado</span><span>${fmtMil(o.prog)}</span></div>`:"")+
         (!det&&o.status!=="fechado"?`<div class="r"><span>Previsto total</span><span>${fmtMil(o.prev)}</span></div>`:"")+
-        `<div style="margin-top:6px;color:var(--muted);font-size:11px">${XF.meses&&XF.meses.has(o.mes)?"Mês selecionado na tabela · Ctrl+clique para tirar":"Clique para ver este mês na tabela · Ctrl+clique para somar meses"}</div>`;
+        `<div style="margin-top:6px;color:var(--muted);font-size:11px">${XF.meses&&XF.meses.has(o.mes)?"Mês selecionado · Ctrl+clique para tirar da tabela":"Clique para filtrar este mês · Ctrl+clique soma meses na tabela"}</div>`;
       tip.style.display="block"; const bx=box.getBoundingClientRect();
       let lx=ev.clientX-bx.left+14; if(lx+210>bx.width) lx=ev.clientX-bx.left-220; tip.style.left=Math.max(0,lx)+"px"; tip.style.top=(ev.clientY-bx.top-10)+"px";});
     h.addEventListener("mouseleave",()=>tip.style.display="none");});
@@ -461,7 +465,7 @@ function niceStep(v){const p=Math.pow(10,Math.floor(Math.log10(v||1))),n=v/p;ret
 
 /* ---------- tabela por empreendimento ---------- */
 function renderTable(){
-  const m=D.mes_atual,y=m.slice(0,4), prox=[...new Set(D.serie.map(s=>s.mes))].filter(x=>x>m).sort()[0];
+  const m=MV(),y=m.slice(0,4), prox=[...new Set(D.serie.map(s=>s.mes))].filter(x=>x>m).sort()[0];
   $("tbTitle").textContent=`Por ${UN().toLowerCase()} · ${mesNome(m)}`;
   const linhas=[];
   D.empreendimentos.filter(okE).forEach(e=>D.grupos.filter(okG).forEach(g=>{
@@ -479,13 +483,13 @@ function renderTable(){
 /* ---------- DRE (acesso completo) ---------- */
 function renderDRE(){
   const card=$("dreCard"); if(!D.dre){card.classList.add("hidden");return;} card.classList.remove("hidden");
-  const m=D.mes_atual, y=m.slice(0,4), meses=[...new Set(D.dre.map(x=>x.mes))].sort();
+  const m=MV(), y=m.slice(0,4), meses=[...new Set(D.dre.map(x=>x.mes))].sort();
   const prox=meses.find(x=>x>m), anoSeg=String(+y+1), temSeg=meses.some(x=>x.startsWith(anoSeg));
   const E=D.dre_estrutura, porId=Object.fromEntries(E.map(l=>[l.id,l]));
   const idx={}; D.dre.forEach(x=>{if(okE(x.empreendimento)){const k=x.linha+"|"+x.mes; idx[k]=idx[k]||{p:0,r:0}; idx[k].p+=x.previsto||0; idx[k].r+=x.realizado||0;}});
   const v=(id,f)=>{const L=porId[id]; if(L.soma) return L.soma.reduce((a,s)=>a+v(s,f),0); return meses.filter(f.m).reduce((a,mm)=>a+((idx[id+"|"+mm]||{})[f.c]||0),0);};
-  const col=[["Previsto "+mesCurto(m),{m:x=>x===m,c:"p"}],["Realizado até "+fmtD(D.corte).slice(0,5),{m:x=>x===m,c:"r"}],null,
-             ["Previsto "+(prox?mesCurto(prox):""),{m:x=>x===prox,c:"p"}],["Realizado "+rotPer(),{m:x=>noPer(x)&&x<=m,c:"r"}],["Previsto "+rotPer(),{m:x=>noPer(x),c:"p"}]];
+  const col=[["Previsto "+mesCurto(m),{m:x=>x===m,c:"p"}],[rotReal(m,true),{m:x=>x===m,c:"r"}],null,
+             ["Previsto "+(prox?mesCurto(prox):""),{m:x=>x===prox,c:"p"}],["Realizado "+rotPer(),{m:x=>noPer(x),c:"r"}],["Previsto "+rotPer(),{m:x=>noPer(x),c:"p"}]];
   $("dreTitle").textContent=`DRE · ${mesNome(m)}`;
   const linhas=[]; E.filter(l=>!l.pai).forEach(l=>{ linhas.push(l); if(l.soma&&E.some(x=>x.pai===l.id)) E.filter(x=>x.pai===l.id).forEach(f=>linhas.push(f)); });
   const chaves=new Set(["receita_liq","lucro_bruto","ebitda","lucro_liq"]);
@@ -506,8 +510,23 @@ const DETALHE=["credor","conta","titulo","situacao"];
 const XF={sel:{},min:null,max:null,meses:null,sort:{k:"data",dir:-1}};
 const MAX_LINHAS=800;
 const detalhe=()=>DETALHE.some(k=>XF.sel[k])||XF.min!=null||XF.max!=null;
-const mesPadrao=()=>new Set([D.mes_atual]);                                   /* a tabela sempre abre no mês vigente */
-const noPadrao=()=>XF.meses&&XF.meses.size===1&&XF.meses.has(D.mes_atual);
+/* MÊS SELECIONADO: abre no mês vigente; o filtro "Mês" (ou um clique numa barra) troca o mês de quadros, tabela, DRE e lançamentos */
+let MSEL=null;
+const MV=()=>MSEL||D.mes_atual;
+const mesPadrao=()=>new Set([MV()]);
+const noPadrao=()=>XF.meses&&XF.meses.size===1&&XF.meses.has(MV());
+function setMes(m){ MSEL=(m&&m!==D.mes_atual)?m:null; XF.meses=mesPadrao(); render(); }
+function renderMesSel(){
+  const ms=[...new Set(D.serie.map(x=>x.mes))].filter(noPer).sort().reverse(), sel=$("fMes");
+  if(!ms.includes(MV())) ms.push(MV());
+  sel.innerHTML=ms.sort().reverse().map(m=>`<option value="${m}" ${m===MV()?"selected":""}>${mesNome(m)}${m===D.mes_atual?" (vigente)":""}</option>`).join("");
+  sel.onchange=()=>setMes(sel.value);
+}
+/* rótulo do realizado do mês: mês fechado inteiro, mês do último conciliado "até dd/mm", mês futuro sem realizado */
+function rotReal(m,curto){ const mc=D.corte.slice(0,7);
+  if(m<mc) return "Realizado "+(curto?mesCurto(m):mesNome(m).toLowerCase());
+  if(m===mc) return "Realizado até "+fmtD(D.corte).slice(0,5);
+  return "Realizado "+(curto?mesCurto(m):mesNome(m).toLowerCase()); }
 function passa(l,exceto){
   if(exceto!=="data"&&XF.meses&&!XF.meses.has(l.data.slice(0,7))) return false;
   if(XF.min!=null&&exceto!=="valor"&&l.valor<XF.min) return false;
@@ -535,7 +554,7 @@ function renderLanc(){
   $("lancFoot").textContent=`${L.length.toLocaleString("pt-BR")} de ${B.length.toLocaleString("pt-BR")} lançamentos${mesesTxt} · realizado ${fmtR(real)}${prog?` · programado ${fmtR(prog)}`:""}`;
   $("limparLanc").classList.toggle("hidden",!(detalhe()||!noPadrao()));
 }
-$("limparLanc").onclick=()=>{XF.sel={};XF.min=XF.max=null;XF.meses=mesPadrao();fecharFiltro();renderChart();renderLanc();};
+$("limparLanc").onclick=()=>{XF.sel={};XF.min=XF.max=null;fecharFiltro();setMes(null);};
 let POP=null;
 function fecharFiltro(){ if(POP){POP.remove();POP=null;} }
 document.addEventListener("click",e=>{ if(POP&&!POP.contains(e.target)) fecharFiltro(); });

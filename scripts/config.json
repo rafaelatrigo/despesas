@@ -32,7 +32,7 @@
     },
     {
       "grupo_fechamento": "8. MARKETING (PRODUTO)",
-      "nome": "Marketing"
+      "nome": "Marketing/Comercial"
     },
     {
       "grupo_fechamento": "8.1. STAND DE VENDAS",
@@ -40,7 +40,7 @@
     },
     {
       "grupo_fechamento": "8.2 COMERCIAL",
-      "nome": "Comercial"
+      "nome": "Marketing/Comercial"
     }
   ],
   "empreendimentos": [
@@ -173,10 +173,11 @@
     },
     {
       "id": "mkt",
-      "nome": "8. Marketing (produto)",
+      "nome": "8. Marketing/Comercial",
       "tipo": "Operacional",
       "grupos": [
-        "8. MARKETING (PRODUTO)"
+        "8. MARKETING (PRODUTO)",
+        "8.2 COMERCIAL"
       ],
       "pai": "despop"
     },
@@ -186,15 +187,6 @@
       "tipo": "Operacional",
       "grupos": [
         "8.1. STAND DE VENDAS"
-      ],
-      "pai": "despop"
-    },
-    {
-      "id": "comercial",
-      "nome": "8.2. Comercial",
-      "tipo": "Operacional",
-      "grupos": [
-        "8.2 COMERCIAL"
       ],
       "pai": "despop"
     },
@@ -241,7 +233,6 @@
         "txinc",
         "mkt",
         "stand",
-        "comercial",
         "adv",
         "consult",
         "outras",
@@ -370,7 +361,11 @@
       },
       {
         "grupo_fechamento": "8. MARKETING (PRODUTO)",
-        "nome": "Marketing"
+        "nome": "Marketing/Comercial"
+      },
+      {
+        "grupo_fechamento": "8.2 COMERCIAL",
+        "nome": "Marketing/Comercial"
       },
       {
         "grupo_fechamento": "10. ADV E CONTADOR",

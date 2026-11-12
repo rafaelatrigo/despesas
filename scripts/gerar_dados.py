@@ -104,7 +104,8 @@ def ordem_dre(g):   # "8.1. STAND" -> 8.1 ; "13. CSC" -> 13
     m = re.match(r"\s*(\d+(?:\.\d+)?)", g["grupo_fechamento"]); return float(m.group(1)) if m else 99
 todos_grupos = sorted(cfg["grupos"] + cfg.get("grupos_completo", []), key=ordem_dre)
 grupos = {gkey(g["grupo_fechamento"]): g["nome"] for g in todos_grupos}          # todos (acesso completo)
-nomes_base = [g["nome"] for g in cfg["grupos"]]                              # só os dos líderes
+nomes_base = list(dict.fromkeys(g["nome"] for g in cfg["grupos"]))           # só os dos líderes (2 grupos com o mesmo nome viram 1 categoria)
+nomes_todos = list(dict.fromkeys(grupos.values()))
 emp_fluxo = {e["empresa_fluxo"]: e["nome"] for e in cfg["empreendimentos"]}
 emp_sienge = {e["empresa_sienge"]: e["nome"] for e in cfg["empreendimentos"]}
 linhas_dre = [l for l in cfg["dre"] if "soma" not in l]
@@ -292,7 +293,7 @@ def status(m):   # fechado: antes do mês vigente; em andamento: mês vigente (e
     return "fechado" if m < mes_corte else ("em andamento" if m <= max(mes_corte, mes_real) else "previsto")
 serie = [{"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev_g[(e, g, m)], 2),
           "realizado": None if status(m) == "previsto" else round(real_g[(e, g, m)], 2), "status": status(m)}
-         for e in emp_fluxo.values() for g in grupos.values() for m in meses]
+         for e in emp_fluxo.values() for g in nomes_todos for m in meses]
 dre = [{"empreendimento": e, "linha": l["id"], "mes": m, "previsto": round(prev_d[(e, l["id"], m)], 2),
         "realizado": None if status(m) == "previsto" else round(real_d[(e, l["id"], m)], 2), "status": status(m)}
        for e in emp_fluxo.values() for l in linhas_dre for m in meses]
@@ -300,7 +301,7 @@ base = {"gerado_em": datetime.datetime.now().isoformat(timespec="minutes"),
         "data_atualizacao": hoje.isoformat(), "corte": corte.isoformat(), "mes_atual": mes_corte,
         "fontes": {"previsto": f_fluxo.name, "realizado": f_budget.name,
                    "previsto_sistema": f_prev.name if f_prev else None, "meses_sistema": meses_sist},
-        "empreendimentos": list(emp_fluxo.values()), "grupos": list(grupos.values()),
+        "empreendimentos": list(emp_fluxo.values()), "grupos": nomes_todos,
         "serie": serie, "lancamentos": sorted(lanc, key=lambda x: x["data"], reverse=True)}
 so_base = lambda lista: [x for x in lista if x["grupo"] in nomes_base]
 serie2 = [{"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev2[(e, g, m)], 2),
@@ -309,7 +310,7 @@ serie2 = [{"empreendimento": e, "grupo": g, "mes": m, "previsto": round(prev2[(e
 visao_empresas = {"unidade": "Empresa", "unidades": "Empresas", "empreendimentos": list(emp2_fluxo.values()),
                   "grupos": cats2, "grupos_base": cats2, "serie": serie2,
                   "lancamentos": sorted(lanc2, key=lambda x: x["data"], reverse=True), "dre": None}
-pacotes = {"lideres": dict(base, perfil="lideres", grupos=[n for n in grupos.values() if n in nomes_base],
+pacotes = {"lideres": dict(base, perfil="lideres", grupos=[n for n in nomes_todos if n in nomes_base],
                            grupos_base=nomes_base, serie=so_base(serie), lancamentos=so_base(base["lancamentos"])),
            "completo": dict(base, perfil="completo", grupos_base=nomes_base, dre=dre,
                             dre_estrutura=[{k: v for k, v in l.items() if k in ("id", "nome", "soma", "pai", "antes")} for l in cfg["dre"]])}
