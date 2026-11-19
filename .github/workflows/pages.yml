@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - name: Bloquear dados sem criptografia
@@ -25,5 +25,14 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+      # o GitHub às vezes ainda não "enxerga" o pacote recém-enviado ("No artifacts named github-pages"):
+      # se a 1ª publicação falhar, espera 1 minuto e tenta de novo
       - id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Aguardar antes de tentar de novo
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 60
+      - id: deployment2
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
